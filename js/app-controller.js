@@ -528,14 +528,39 @@ export async function refreshAllData() {
 
     const stravaBtns = document.querySelectorAll('[data-action="sync-strava"]');
     stravaBtns.forEach(btn => {
+      if (AppState.settings?.strava_connected) {
+        btn.classList.add('border', 'border-tertiary-container/40');
+      }
       btn.onclick = async () => {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        const labelSpan = btn.querySelector('span:last-child');
+        const origLabel = labelSpan ? labelSpan.textContent : 'Sync Strava';
+        if (labelSpan) labelSpan.textContent = 'Syncing...';
+
         try {
-          showToast('Syncing latest rides from Strava API...');
-          const res = await TelemetryService.triggerStravaSync();
-          showToast(`Strava Synced: ${res?.syncedCount || 0} new rides imported.`);
+          showToast('Menghubungkan ke Strava API...');
+          const res = await TelemetryService.triggerStravaSync(AppState.selectedBike?.id || null);
+
+          if (res?.needsAuth && res?.authUrl) {
+            showToast('Mengalihkan ke halaman login Strava OAuth...');
+            window.location.href = res.authUrl;
+            return;
+          }
+
+          const count = res?.syncedCount || 0;
+          const km = res?.totalKmAdded || 0;
+          if (count > 0) {
+            showToast(`Strava Synced: +${count} aktivitas (+${formatKm(km)} km) masuk ke ${res.bikeName || 'sepeda'}!`);
+          } else {
+            showToast('Strava sudah sinkron — tidak ada aktivitas baru.');
+          }
           await refreshAllData();
         } catch (err) {
-          showToast(err.message || 'Strava Edge Function not deployed yet', 'error');
+          showToast(err.message || 'Gagal sinkronisasi Strava', 'error');
+        } finally {
+          btn.disabled = false;
+          if (labelSpan) labelSpan.textContent = origLabel;
         }
       };
     });
@@ -572,6 +597,21 @@ window.GearTrackUI = {
   formatKm
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  refreshAllData();
+document.addEventListener('DOMContentLoaded', async () => {
+  await refreshAllData();
+
+  const params = new URLSearchParams(window.location.search);
+  const stravaStatus = params.get('strava');
+  if (stravaStatus) {
+    if (stravaStatus === 'connected') {
+      const synced = Number(params.get('synced') || 0);
+      const km = Number(params.get('km') || 0);
+      showToast(`Strava terhubung! ${synced} aktivitas (+${formatKm(km)} km) disinkronkan.`);
+    } else if (stravaStatus === 'denied') {
+      showToast('Otorisasi Strava dibatalkan.', 'error');
+    } else if (stravaStatus === 'error') {
+      showToast(`Strava Error: ${params.get('msg') || 'Gagal menghubungkan akun'}`, 'error');
+    }
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 });

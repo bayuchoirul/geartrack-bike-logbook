@@ -296,10 +296,16 @@ export const TelemetryService = {
     };
   },
 
-  async triggerStravaSync() {
-    const { supabase } = await getSupabase();
-    const { data, error } = await supabase.functions.invoke('strava-sync');
-    if (error) throw error;
+  async triggerStravaSync(bikeId = null) {
+    const response = await fetch('/api/strava/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bikeId })
+    });
+    const data = await response.json();
+    if (!response.ok || (!data.success && !data.needsAuth)) {
+      throw new Error(data.error || 'Gagal melakukan sinkronisasi Strava');
+    }
     return data;
   },
 
