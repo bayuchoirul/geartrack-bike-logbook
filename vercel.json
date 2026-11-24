@@ -3,18 +3,15 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/backend/api/$1" },
-    { "source": "/", "destination": "/frontend/pages/index.html" },
-    { "source": "/login", "destination": "/frontend/pages/login.html" },
-    { "source": "/log-activity", "destination": "/frontend/pages/log-activity.html" },
-    { "source": "/ledger", "destination": "/frontend/pages/ledger.html" },
-    { "source": "/garage", "destination": "/frontend/pages/garage.html" },
-    { "source": "/css/(.*)", "destination": "/frontend/pages/css/$1" },
-    { "source": "/js/(.*)", "destination": "/frontend/js/$1" }
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/log-activity", "destination": "/log-activity.html" },
+    { "source": "/ledger", "destination": "/ledger.html" },
+    { "source": "/garage", "destination": "/garage.html" }
   ],
   "headers": [
     {
-      "source": "/(frontend/)?js/(.*)",
+      "source": "/js/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]

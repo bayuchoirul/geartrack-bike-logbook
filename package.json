@@ -1,11 +1,11 @@
 {
   "name": "geartrack-bike-logbook-monorepo",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "private": true,
   "type": "module",
-  "description": "GearTrack / Bike Logbook Telemetry v3.0 - Modular Monorepo (Frontend, Backend API & Google Sheets Backup)",
+  "description": "GearTrack / Bike Logbook Telemetry v3.1 - Vercel Native Structure (public/ + api/)",
   "scripts": {
     "dev": "npx vercel dev",
-    "start": "npx serve ."
+    "start": "npx serve public"
   }
 }
