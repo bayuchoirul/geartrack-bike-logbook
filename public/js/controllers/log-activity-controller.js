@@ -258,3 +258,43 @@ window.addEventListener('telemetry:updated', (e) => {
       .join('');
   }
 });
+
+rideForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(rideForm);
+    const movingMinVal = Number(fd.get('moving_time_min')) || 0;
+    const rawNotes = String(fd.get('notes') || '').trim();
+    const metaParts = [];
+
+    if (importedFileMeta) {
+      metaParts.push(`${importedFileMeta.sourceFormat.toUpperCase()}: ${importedFileMeta.fileName}`);
+    }
+    if (movingMinVal > 0) {
+      metaParts.push(`Moving Time: ${movingMinVal} min`);
+    }
+
+    const metaNote = metaParts.length ? `[${metaParts.join(' • ')}]` : '';
+    const mergedNotes = [rawNotes, metaNote].filter(Boolean).join(' ');
+
+    const payload = {
+      bike_id: fd.get('bike_id'),
+      title: String(fd.get('title') || '').trim(),
+      distance_km: Number(fd.get('distance_km')),
+      ride_type: fd.get('ride_type'),
+      ride_date: new Date(fd.get('ride_date')).toISOString(),
+      elevation_gain_m: Number(fd.get('elevation_gain_m')) || 0,
+      source: importedFileMeta?.sourceFormat || 'manual',
+      notes: mergedNotes
+    };
+
+    try {
+      await TelemetryService.logRide(payload);
+      window.GearTrackUI.showToast('Ride berhasil dicatat & odometer diperbarui!');
+      rideForm.reset();
+      resetImportedFileState();
+      resetDateDefault();
+      await window.GearTrackUI.refreshAllData();
+    } catch (err) {
+      window.GearTrackUI.showToast(err.message, 'error');
+    }
+  });
