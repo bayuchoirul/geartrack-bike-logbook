@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Bike Logbook Telemetry v2.4</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-tint": "#abd600",
+            "on-secondary": "#003640",
+            "secondary": "#4cd7f6",
+            "error-container": "#93000a",
+            "on-surface": "#dce1fb",
+            "on-background": "#dce1fb",
+            "surface-container-highest": "#2e3447",
+            "on-primary": "#283500",
+            "error": "#ffb4ab",
+            "on-surface-variant": "#c4c9ac",
+            "surface-container-lowest": "#070d1f",
+            "primary": "#ffffff",
+            "on-error": "#690005",
+            "primary-container": "#c3f400",
+            "surface-container": "#191f31",
+            "tertiary-container": "#6ffbbe",
+            "surface-container-high": "#23293c",
+            "surface-container-low": "#151b2d",
+            "background": "#0c1324",
+            "tertiary-fixed": "#6ffbbe",
+            "outline-variant": "#444933",
+            "primary-fixed": "#c3f400",
+            "secondary-container": "#03b5d3",
+            "tertiary-fixed-dim": "#4edea3",
+            "outline": "#8e9379",
+            "surface": "#0c1324"
+          },
+          spacing: {
+            "margin-desktop": "2rem",
+            "gutter-desktop": "1.5rem",
+            "space-xl": "2.5rem",
+            "space-lg": "1.5rem",
+            "space-md": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem"
+          },
+          fontFamily: {
+            "headline-lg": ["Space Grotesk"],
+            "headline-md": ["Space Grotesk"],
+            "headline-sm": ["Space Grotesk"],
+            "body-md": ["Inter"],
+            "body-sm": ["Inter"],
+            "telemetry-data": ["JetBrains Mono"],
+            "telemetry-metric-md": ["JetBrains Mono"],
+            "telemetry-metric-lg": ["JetBrains Mono"],
+            "label-caps": ["JetBrains Mono"]
+          },
+          fontSize: {
+            "headline-lg": ["32px", { lineHeight: "38px", fontWeight: "600" }],
+            "headline-md": ["22px", { lineHeight: "28px", fontWeight: "600" }],
+            "headline-sm": ["18px", { lineHeight: "24px", fontWeight: "600" }],
+            "body-md": ["14px", { lineHeight: "20px" }],
+            "body-sm": ["12px", { lineHeight: "16px" }],
+            "telemetry-data": ["13px", { lineHeight: "18px" }],
+            "telemetry-metric-md": ["20px", { lineHeight: "26px", fontWeight: "600" }],
+            "telemetry-metric-lg": ["30px", { lineHeight: "34px", fontWeight: "700" }],
+            "label-caps": ["11px", { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "600" }]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface font-body-md text-on-surface antialiased min-h-screen">
+  <header class="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)]">
+    <div class="h-16 w-full px-margin-desktop flex items-center justify-between gap-4">
+      <div class="flex items-center gap-6">
+        <a href="/" class="flex items-center gap-2">
+          <span class="font-headline-sm text-headline-sm font-bold text-primary">Bike Logbook</span>
+          <span class="font-label-caps text-label-caps uppercase px-1.5 py-0.5 rounded bg-surface-container text-surface-tint">v2.4</span>
+        </a>
+        <nav class="flex items-center gap-5 text-body-md">
+          <a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/">Dashboard</a>
+<a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/log-activity">Log Activity</a>
+<a class="transition-colors py-1 text-primary-container font-semibold" href="/ledger">History & Ledger</a>
+<a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/garage">Garage & Components</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-2">
+        <button data-action="sync-strava" class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-high hover:bg-surface-container-highest text-secondary transition-all" type="button">
+          <span class="material-symbols-outlined text-[16px]">bolt</span>
+          <span class="font-label-caps text-label-caps uppercase font-semibold">Sync Strava</span>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main class="w-full pt-16 min-h-[calc(100vh-64px)]">
+    
+    <div class="w-full px-margin-desktop py-space-xl max-w-[1440px] mx-auto space-y-space-lg">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-container-low p-space-lg rounded-xl">
+        <div>
+          <span class="font-label-caps text-label-caps uppercase text-secondary">AUDIT STREAM & EXPENSES</span>
+          <h1 class="font-headline-lg text-headline-lg text-primary font-bold">History & Cost Ledger</h1>
+        </div>
+        <button data-action="backup-sheets" class="px-4 py-2.5 rounded-xl bg-primary-container text-on-primary font-label-caps uppercase font-bold flex items-center gap-2" type="button">
+          <span class="material-symbols-outlined text-[18px]">sync</span>
+          <span>Export / Backup to Google Sheets</span>
+        </button>
+      </div>
+
+      <div class="bg-surface-container-low rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-surface-container-lowest font-label-caps text-label-caps uppercase text-on-surface-variant">
+                <th class="p-4">Date</th>
+                <th class="p-4">Type</th>
+                <th class="p-4">Activity / Operation</th>
+                <th class="p-4 text-right">Distance / ODO</th>
+                <th class="p-4 text-right">Cost (IDR)</th>
+                <th class="p-4">Notes</th>
+              </tr>
+            </thead>
+            <tbody id="live-ledger-tbody" class="font-body-sm divide-y divide-outline-variant/20">
+              <tr><td colspan="6" class="p-6 text-center text-on-surface-variant">Memuat riwayat logbook...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <script type="module">
+      import { formatIDR, formatKm } from './js/supabase-service.js';
+      window.addEventListener('telemetry:updated', (e) => {
+        const { ledger } = e.detail.AppState;
+        const tbody = document.getElementById('live-ledger-tbody');
+        if (!ledger.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-on-surface-variant">Belum ada catatan aktivitas atau servis.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = ledger.map(item => {
+          const isRide = item.type === 'RIDE';
+          const badgeClass = isRide
+            ? 'bg-secondary/15 text-secondary'
+            : item.type === 'REPLACEMENT'
+              ? 'bg-error/20 text-error'
+              : 'bg-tertiary-container/20 text-tertiary-fixed';
+          return `
+            <tr class="hover:bg-surface-container transition-colors">
+              <td class="p-4 font-telemetry-data text-primary whitespace-nowrap">${new Date(item.timestamp).toLocaleDateString('id-ID')}</td>
+              <td class="p-4"><span class="px-2 py-0.5 rounded font-label-caps text-label-caps uppercase ${badgeClass}">${item.type}</span></td>
+              <td class="p-4">
+                <div class="font-semibold text-primary">${item.title}</div>
+                <div class="font-telemetry-data text-[11px] text-on-surface-variant">${item.subtitle}</div>
+              </td>
+              <td class="p-4 text-right font-telemetry-data ${isRide ? 'text-secondary font-bold' : 'text-on-surface-variant'}">
+                ${isRide ? `+${formatKm(item.deltaKm)} km` : `@ ${formatKm(item.odometerAt)} km`}
+              </td>
+              <td class="p-4 text-right font-telemetry-data text-primary font-semibold">
+                ${item.costIdr > 0 ? formatIDR(item.costIdr) : '—'}
+              </td>
+              <td class="p-4 text-on-surface-variant max-w-xs truncate">${item.notes}</td>
+            </tr>
+          `;
+        }).join('');
+      });
+    </script>
+    
+  </main>
+  <footer class="w-full bg-surface-container-lowest py-6 px-margin-desktop flex flex-col md:flex-row items-center justify-between gap-4 font-telemetry-data text-body-sm text-on-surface-variant">
+    <span class="text-primary font-semibold">Bike Logbook Telemetry v2.4</span>
+    <span class="font-label-caps text-label-caps text-outline">VERCEL • SUPABASE • STRAVA API • GOOGLE SHEETS</span>
+  </footer>
+  <script type="module" src="./js/app-controller.js"></script>
+</body>
+</html>
