@@ -1,5 +1,6 @@
 // frontend/js/controllers/log-activity-controller.js
 import { TelemetryService } from '../services/telemetry-service.js';
+import { parseActivityFile, formatLocalDateTimeInput } from '../services/activity-file-parser.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const rideForm = document.getElementById('form-manual-ride');
@@ -8,8 +9,148 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnService = document.getElementById('btn-mode-service');
   const dateInput = document.getElementById('ride-date-input');
 
-  if (dateInput) {
-    dateInput.value = new Date().toISOString().slice(0, 16);
+  const fileInput = document.getElementById('activity-file-input');
+  const dropzone = document.getElementById('activity-file-dropzone');
+  const btnChooseFile = document.getElementById('btn-choose-activity-file');
+  const btnClearFile = document.getElementById('btn-clear-activity-file');
+  const fileStatusEl = document.getElementById('activity-file-status');
+  const fileWarningsEl = document.getElementById('activity-file-warnings');
+
+  let importedFileMeta = null;
+
+  const resetDateDefault = () => {
+    if (dateInput) {
+      dateInput.value = formatLocalDateTimeInput(new Date());
+    }
+  };
+
+  const renderWarnings = (warnings = []) => {
+    if (!fileWarningsEl) return;
+    if (!warnings.length) {
+      fileWarningsEl.classList.add('hidden');
+      fileWarningsEl.innerHTML = '';
+      return;
+    }
+    fileWarningsEl.classList.remove('hidden');
+    fileWarningsEl.innerHTML = warnings
+      .map((w) => `<div>• ${w}</div>`)
+      .join('');
+  };
+
+  const resetImportedFileState = () => {
+    importedFileMeta = null;
+    if (fileInput) fileInput.value = '';
+    if (btnClearFile) btnClearFile.classList.add('hidden');
+    if (fileStatusEl) {
+      fileStatusEl.textContent =
+        'Pilih atau seret file .gpx / .fit dari iGPSPORT atau Garmin untuk mengisi form otomatis.';
+    }
+    renderWarnings([]);
+  };
+
+  const handleSelectedFile = async (file) => {
+    if (!file || !rideForm) return;
+
+    if (fileStatusEl) {
+      fileStatusEl.textContent = `Membaca ${file.name}...`;
+    }
+    renderWarnings([]);
+
+    try {
+      const parsed = await parseActivityFile(file);
+      importedFileMeta = {
+        sourceFormat: parsed.sourceFormat,
+        fileName: parsed.fileName,
+        movingSeconds: parsed.movingSeconds
+      };
+
+      const titleInput = rideForm.querySelector('[name="title"]');
+      const distanceInput = rideForm.querySelector('[name="distance_km"]');
+      const rideTypeSelect = rideForm.querySelector('[name="ride_type"]');
+      const movingMinInput = rideForm.querySelector('[name="moving_time_min"]');
+      const elevationInput = rideForm.querySelector('[name="elevation_gain_m"]');
+
+      if (titleInput && parsed.title) {
+        titleInput.value = parsed.title;
+      }
+      if (distanceInput && Number.isFinite(parsed.distanceKm)) {
+        distanceInput.value = parsed.distanceKm.toFixed(2);
+      }
+      if (rideTypeSelect && parsed.rideType) {
+        const hasOption = Array.from(rideTypeSelect.options).some(
+          (opt) => opt.value === parsed.rideType
+        );
+        if (hasOption) {
+          rideTypeSelect.value = parsed.rideType;
+        }
+      }
+      if (dateInput && parsed.dateTimeLocal) {
+        dateInput.value = parsed.dateTimeLocal;
+      }
+      if (movingMinInput && Number.isFinite(parsed.movingMinutes)) {
+        movingMinInput.value = String(parsed.movingMinutes);
+      }
+      if (elevationInput && Number.isFinite(parsed.elevationGainM)) {
+        elevationInput.value = String(parsed.elevationGainM);
+      }
+
+      if (btnClearFile) btnClearFile.classList.remove('hidden');
+      if (fileStatusEl) {
+        const durLabel =
+          parsed.movingMinutes > 0 ? ` • ${parsed.movingMinutes} min` : '';
+        fileStatusEl.textContent = `Terbaca (${parsed.sourceFormat.toUpperCase()}): ${parsed.fileName} (${parsed.distanceKm.toFixed(2)} km${durLabel})`;
+      }
+      renderWarnings(parsed.warnings);
+
+      window.GearTrackUI?.showToast(
+        `Data dari ${file.name} berhasil diisikan ke form.`
+      );
+    } catch (err) {
+      resetImportedFileState();
+      if (fileStatusEl) {
+        fileStatusEl.textContent = `Gagal membaca file: ${err.message || 'Format tidak valid'}`;
+      }
+      window.GearTrackUI?.showToast(
+        err.message || 'Gagal memproses file .gpx / .fit',
+        'error'
+      );
+    }
+  };
+
+  resetDateDefault();
+
+  btnChooseFile?.addEventListener('click', () => fileInput?.click());
+  btnClearFile?.addEventListener('click', () => {
+    resetImportedFileState();
+    window.GearTrackUI?.showToast('File impor direset.');
+  });
+
+  fileInput?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (file) handleSelectedFile(file);
+  });
+
+  if (dropzone) {
+    ['dragenter', 'dragover'].forEach((evtName) => {
+      dropzone.addEventListener(evtName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('border-secondary', 'bg-surface-container-high/40');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach((evtName) => {
+      dropzone.addEventListener(evtName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('border-secondary', 'bg-surface-container-high/40');
+      });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      const droppedFile = e.dataTransfer?.files?.[0];
+      if (droppedFile) handleSelectedFile(droppedFile);
+    });
   }
 
   btnRide?.addEventListener('click', () => {
@@ -29,6 +170,13 @@ document.addEventListener('DOMContentLoaded', () => {
   rideForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(rideForm);
+    const movingMinVal = Number(fd.get('moving_time_min')) || 0;
+    const rawNotes = String(fd.get('notes') || '').trim();
+    const metaNote = importedFileMeta
+      ? `[${importedFileMeta.sourceFormat.toUpperCase()}: ${importedFileMeta.fileName}${movingMinVal > 0 ? `, ${movingMinVal} min` : ''}]`
+      : '';
+    const mergedNotes = [rawNotes, metaNote].filter(Boolean).join(' ');
+
     try {
       await TelemetryService.logRide({
         bike_id: fd.get('bike_id'),
@@ -37,12 +185,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ride_type: fd.get('ride_type'),
         ride_date: new Date(fd.get('ride_date')).toISOString(),
         elevation_gain_m: Number(fd.get('elevation_gain_m')) || 0,
-        source: 'manual',
-        notes: fd.get('notes')
+        moving_time_minutes: movingMinVal,
+        source: importedFileMeta?.sourceFormat || 'manual',
+        notes: mergedNotes
       });
       window.GearTrackUI.showToast('Ride berhasil dicatat & odometer diperbarui!');
       rideForm.reset();
-      if (dateInput) dateInput.value = new Date().toISOString().slice(0, 16);
+      resetImportedFileState();
+      resetDateDefault();
       await window.GearTrackUI.refreshAllData();
     } catch (err) {
       window.GearTrackUI.showToast(err.message, 'error');
