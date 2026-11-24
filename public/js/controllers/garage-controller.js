@@ -166,6 +166,12 @@ window.addEventListener('telemetry:updated', async (e) => {
   const bikesGrid = document.getElementById('live-bikes-grid');
   if (!bikesGrid) return;
 
+  // Prioritaskan sepeda dengan flag is_default = true sebagai sepeda aktif
+  const activeBike = bikes.find(b => b.is_default) || selectedBike || bikes[0] || null;
+  if (window.GearTrackUI?.AppState && activeBike) {
+    window.GearTrackUI.AppState.selectedBike = activeBike;
+  }
+
   if (!bikes.length) {
     bikesGrid.innerHTML = `
       <div class="col-span-full bg-surface-container-low p-8 rounded-xl text-center">
@@ -191,6 +197,10 @@ window.addEventListener('telemetry:updated', async (e) => {
           <div class="font-telemetry-metric-md text-primary-container font-bold">${formatKm(b.odometer_km)} km</div>
           <div class="flex items-center gap-2">
             ${!b.is_default ? `<button data-set-default="${b.id}" class="px-3 py-1.5 rounded bg-surface-container-high hover:bg-surface-container-highest text-secondary font-label-caps text-label-caps uppercase transition-all" type="button">Set Active</button>` : ''}
+            <button data-edit-bike="${b.id}" class="px-3 py-1.5 rounded bg-surface-container-high hover:bg-surface-container-highest text-primary font-label-caps text-label-caps uppercase transition-all flex items-center gap-1" type="button" title="Edit Registered Bike">
+              <span class="material-symbols-outlined text-[15px]">edit</span>
+              <span>Edit</span>
+            </button>
             <button data-delete-bike="${b.id}" class="px-3 py-1.5 rounded bg-error-container/30 hover:bg-error text-error hover:text-on-error font-label-caps text-label-caps uppercase transition-all flex items-center gap-1" type="button" title="Delete Registered Bike">
               <span class="material-symbols-outlined text-[15px]">delete</span>
               <span>Delete</span>
@@ -201,11 +211,42 @@ window.addEventListener('telemetry:updated', async (e) => {
     `).join('');
   }
 
+  const rules = await loadComponentRules(stateRules);
+  renderComponentRules(rules, activeBike);
+
   document.querySelectorAll('[data-set-default]').forEach(btn => {
     btn.onclick = async () => {
-      await TelemetryService.setDefaultBike(btn.dataset.setDefault);
-      window.GearTrackUI.showToast('Active bicycle switched!');
-      await window.GearTrackUI.refreshAllData();
+      const targetBikeId = btn.dataset.setDefault;
+      const targetBike = bikes.find(item => item.id === targetBikeId);
+
+      btn.disabled = true;
+      btn.textContent = 'Switching...';
+
+      try {
+        // 1. Update UI & Component Calibration Rules seketika tanpa menunggu reload
+        if (targetBike && window.GearTrackUI?.AppState) {
+          window.GearTrackUI.AppState.selectedBike = targetBike;
+          renderComponentRules(rules, targetBike);
+        }
+
+        // 2. Simpan perubahan active default ke Supabase & sinkronkan seluruh state
+        await TelemetryService.setDefaultBike(targetBikeId);
+        window.GearTrackUI.showToast(`Active bicycle switched to ${targetBike?.name || 'selected bike'}!`);
+        await window.GearTrackUI.refreshAllData();
+      } catch (err) {
+        window.GearTrackUI.showToast(err.message || 'Gagal mengganti sepeda aktif', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Set Active';
+      }
+    };
+  });
+
+  document.querySelectorAll('[data-edit-bike]').forEach(btn => {
+    btn.onclick = () => {
+      const targetBike = bikes.find(item => item.id === btn.dataset.editBike);
+      if (targetBike) {
+        window.GearTrackUI.openEditBikeModal(targetBike);
+      }
     };
   });
 
@@ -217,10 +258,6 @@ window.addEventListener('telemetry:updated', async (e) => {
       }
     };
   });
-
-  const activeBike = selectedBike || bikes.find(b => b.is_default) || bikes[0] || null;
-  const rules = await loadComponentRules(stateRules);
-  renderComponentRules(rules, activeBike);
 
   const archEl = document.getElementById('live-archived-list');
   if (!archEl) return;

@@ -1,6 +1,7 @@
 // js/app-controller.js
 import { TelemetryService, formatIDR, formatKm } from '../services/telemetry-service.js';
 import { AuthService } from '../services/auth-service.js';
+import { getSupabase } from '../core/supabase-client.js';
 
 export const AppState = {
   currentUser: null,
@@ -319,6 +320,114 @@ export function openAddBikeModal() {
   });
 }
 
+export function openEditBikeModal(bike) {
+  if (!bike) return;
+  openModal({
+    eyebrow: 'FLEET CONFIGURATION',
+    title: `Edit Bicycle: ${bike.name}`,
+    bodyHtml: `
+      <form id="form-edit-bike" class="space-y-4 font-body-sm">
+        <div>
+          <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Bicycle Model Name</label>
+          <input type="text" name="name" required value="${bike.name || ''}" class="w-full bg-surface-container-lowest text-primary p-2.5 rounded"/>
+        </div>
+        <div>
+          <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Subtitle / Discipline</label>
+          <input type="text" name="subtitle" value="${bike.subtitle || ''}" placeholder="e.g. Endurance Road & Gravel Rig" class="w-full bg-surface-container-lowest text-primary p-2.5 rounded"/>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Groupset Spec</label>
+            <input type="text" name="groupset_spec" value="${bike.groupset_spec || ''}" placeholder="Shimano 105 R7000 11s" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
+          </div>
+          <div>
+            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Gear Ratio</label>
+            <input type="text" name="drivetrain_ratio" value="${bike.drivetrain_ratio || ''}" placeholder="50-34T • 11-36T" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Wheel &amp; Tire Spec</label>
+            <input type="text" name="wheel_tire_spec" value="${bike.wheel_tire_spec || ''}" placeholder="700x32c / 700x38c" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
+          </div>
+          <div>
+            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Current Odometer (KM)</label>
+            <input type="number" step="0.1" name="odometer_km" required value="${Number(bike.odometer_km) || 0}" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 items-center">
+          <div>
+            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Status</label>
+            <select name="status" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded">
+              <option value="in_service" ${bike.status === 'in_service' ? 'selected' : ''}>IN_SERVICE</option>
+              <option value="standby" ${bike.status === 'standby' ? 'selected' : ''}>STANDBY</option>
+              <option value="maintenance" ${bike.status === 'maintenance' ? 'selected' : ''}>MAINTENANCE</option>
+              <option value="retired" ${bike.status === 'retired' ? 'selected' : ''}>RETIRED</option>
+            </select>
+          </div>
+          <label class="flex items-center gap-2 text-on-surface cursor-pointer pt-5">
+            <input type="checkbox" name="is_default" ${bike.is_default ? 'checked' : ''} class="accent-primary-container"/>
+            <span>Active Default Bicycle</span>
+          </label>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="cancel-edit-bike-btn" class="px-4 py-2 rounded bg-surface-container-high text-on-surface font-label-caps uppercase">Cancel</button>
+          <button type="submit" id="submit-edit-bike-btn" class="px-5 py-2 rounded bg-primary-container text-on-primary font-label-caps uppercase font-bold">Save Changes</button>
+        </div>
+      </form>
+    `,
+    onMount: () => {
+      document.getElementById('cancel-edit-bike-btn').addEventListener('click', closeModal);
+      document.getElementById('form-edit-bike').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const submitBtn = document.getElementById('submit-edit-bike-btn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+
+        const updates = {
+          name: String(fd.get('name') || '').trim(),
+          subtitle: String(fd.get('subtitle') || '').trim(),
+          groupset_spec: String(fd.get('groupset_spec') || '').trim(),
+          drivetrain_ratio: String(fd.get('drivetrain_ratio') || '').trim(),
+          wheel_tire_spec: String(fd.get('wheel_tire_spec') || '').trim(),
+          odometer_km: Number(fd.get('odometer_km')) || 0,
+          status: String(fd.get('status') || 'in_service'),
+          is_default: fd.get('is_default') === 'on'
+        };
+
+        try {
+          if (typeof TelemetryService.updateBike === 'function') {
+            await TelemetryService.updateBike(bike.id, updates);
+          } else {
+            const { supabase } = await getSupabase();
+            if (updates.is_default) {
+              await supabase.from('bikes').update({ is_default: false }).neq('id', bike.id);
+            }
+            const { error } = await supabase
+              .from('bikes')
+              .update(updates)
+              .eq('id', bike.id);
+            if (error) throw error;
+          }
+
+          if (updates.is_default || AppState.selectedBike?.id === bike.id) {
+            AppState.selectedBike = { ...bike, ...updates };
+          }
+
+          closeModal();
+          showToast(`Data sepeda "${updates.name}" berhasil diperbarui!`);
+          await refreshAllData();
+        } catch (err) {
+          showToast(err.message || 'Gagal memperbarui data sepeda', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Save Changes';
+        }
+      });
+    }
+  });
+}
+
 export function openDeleteBikeModal(bike) {
   if (!bike) return;
   const otherBikes = AppState.bikes.filter(b => b.id !== bike.id);
@@ -375,7 +484,6 @@ export function openDeleteBikeModal(bike) {
     }
   });
 }
-
 
 export function openSheetsBackupModal() {
   const saved = TelemetryService.getSavedSheetsConfig();
@@ -465,12 +573,27 @@ export function openSheetsBackupModal() {
 }
 
 export function openAddComponentModal() {
-  if (!AppState.selectedBike) return;
+  const bikes = AppState.bikes || [];
+  const defaultBike = AppState.selectedBike || bikes.find(b => b.is_default) || bikes[0];
+  if (!defaultBike) return;
+
+  const bikeOptionsHtml = bikes.map(b => `
+    <option value="${b.id}" ${b.id === defaultBike.id ? 'selected' : ''}>
+      ${b.name} (${formatKm(b.odometer_km)} km)${b.is_default ? ' • Active' : ''}
+    </option>
+  `).join('');
+
   openModal({
-    eyebrow: `HARDWARE REGISTRY • ${AppState.selectedBike.name.toUpperCase()}`,
+    eyebrow: `HARDWARE REGISTRY • ${defaultBike.name.toUpperCase()}`,
     title: 'Register Tracked Component',
     bodyHtml: `
       <form id="form-add-component" class="space-y-4 font-body-sm">
+        <div>
+          <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Target Registered Bicycle</label>
+          <select name="bike_id" id="comp-target-bike" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded">
+            ${bikeOptionsHtml}
+          </select>
+        </div>
         <div>
           <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Component Name & Model</label>
           <input type="text" name="name" required placeholder="e.g. Shimano HG-601 11-Speed Chain" class="w-full bg-surface-container-lowest text-primary p-2.5 rounded"/>
@@ -517,10 +640,23 @@ export function openAddComponentModal() {
       </form>
     `,
     onMount: () => {
+      const bikeSelect = document.getElementById('comp-target-bike');
+      const eyebrowEl = document.getElementById('modal-eyebrow');
+
+      bikeSelect?.addEventListener('change', () => {
+        const chosenBike = bikes.find(b => b.id === bikeSelect.value);
+        if (chosenBike && eyebrowEl) {
+          eyebrowEl.textContent = `HARDWARE REGISTRY • ${chosenBike.name.toUpperCase()}`;
+        }
+      });
+
       document.getElementById('cancel-comp-btn').addEventListener('click', closeModal);
       document.getElementById('form-add-component').addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
+        const targetBikeId = fd.get('bike_id');
+        const targetBike = bikes.find(b => b.id === targetBikeId) || defaultBike;
+
         const iconMap = {
           'Drivetrain': 'link',
           'Wheelset (Rear)': 'tire_repair',
@@ -532,12 +668,12 @@ export function openAddComponentModal() {
         const cat = fd.get('category');
         try {
           await TelemetryService.addComponent({
-            bike_id: AppState.selectedBike.id,
+            bike_id: targetBike.id,
             name: fd.get('name'),
             category: cat,
             icon_name: iconMap[cat] || 'settings',
             installed_date: fd.get('installed_date'),
-            installed_at_bike_km: AppState.selectedBike.odometer_km,
+            installed_at_bike_km: targetBike.odometer_km,
             logged_km: Number(fd.get('logged_km')) || 0,
             interval_km: 0,
             max_lifespan_km: Number(fd.get('max_lifespan_km')),
@@ -546,7 +682,7 @@ export function openAddComponentModal() {
             status: 'active'
           });
           closeModal();
-          showToast(`Component "${fd.get('name')}" added to ${AppState.selectedBike.name}`);
+          showToast(`Component "${fd.get('name')}" added to ${targetBike.name}`);
           await refreshAllData();
         } catch (err) {
           showToast(err.message || 'Failed to add component', 'error');
@@ -770,6 +906,7 @@ window.GearTrackUI = {
   AppState,
   refreshAllData,
   openAddBikeModal,
+  openEditBikeModal,
   openDeleteBikeModal,
   openAddComponentModal,
   openSheetsBackupModal,
