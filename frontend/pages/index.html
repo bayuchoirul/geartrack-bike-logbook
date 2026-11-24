@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Bike Logbook Telemetry v3.0</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-tint": "#abd600",
+            "on-secondary": "#003640",
+            "secondary": "#4cd7f6",
+            "error-container": "#93000a",
+            "on-surface": "#dce1fb",
+            "on-background": "#dce1fb",
+            "surface-container-highest": "#2e3447",
+            "on-primary": "#283500",
+            "error": "#ffb4ab",
+            "on-surface-variant": "#c4c9ac",
+            "surface-container-lowest": "#070d1f",
+            "primary": "#ffffff",
+            "on-error": "#690005",
+            "primary-container": "#c3f400",
+            "surface-container": "#191f31",
+            "tertiary-container": "#6ffbbe",
+            "surface-container-high": "#23293c",
+            "surface-container-low": "#151b2d",
+            "background": "#0c1324",
+            "tertiary-fixed": "#6ffbbe",
+            "outline-variant": "#444933",
+            "primary-fixed": "#c3f400",
+            "secondary-container": "#03b5d3",
+            "tertiary-fixed-dim": "#4edea3",
+            "outline": "#8e9379",
+            "surface": "#0c1324"
+          },
+          spacing: {
+            "margin-desktop": "2rem",
+            "gutter-desktop": "1.5rem",
+            "space-xl": "2.5rem",
+            "space-lg": "1.5rem",
+            "space-md": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem"
+          },
+          fontFamily: {
+            "headline-lg": ["Space Grotesk"],
+            "headline-md": ["Space Grotesk"],
+            "headline-sm": ["Space Grotesk"],
+            "body-md": ["Inter"],
+            "body-sm": ["Inter"],
+            "telemetry-data": ["JetBrains Mono"],
+            "telemetry-metric-md": ["JetBrains Mono"],
+            "telemetry-metric-lg": ["JetBrains Mono"],
+            "label-caps": ["JetBrains Mono"]
+          },
+          fontSize: {
+            "headline-lg": ["32px", { lineHeight: "38px", fontWeight: "600" }],
+            "headline-md": ["22px", { lineHeight: "28px", fontWeight: "600" }],
+            "headline-sm": ["18px", { lineHeight: "24px", fontWeight: "600" }],
+            "body-md": ["14px", { lineHeight: "20px" }],
+            "body-sm": ["12px", { lineHeight: "16px" }],
+            "telemetry-data": ["13px", { lineHeight: "18px" }],
+            "telemetry-metric-md": ["20px", { lineHeight: "26px", fontWeight: "600" }],
+            "telemetry-metric-lg": ["30px", { lineHeight: "34px", fontWeight: "700" }],
+            "label-caps": ["11px", { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "600" }]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface font-body-md text-on-surface antialiased min-h-screen">
+  <header class="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)]">
+    <div class="h-16 w-full px-margin-desktop flex items-center justify-between gap-4">
+      <div class="flex items-center gap-6">
+        <a href="/" class="flex items-center gap-2">
+          <span class="font-headline-sm text-headline-sm font-bold text-primary">Bike Logbook</span>
+          <span class="font-label-caps text-label-caps uppercase px-1.5 py-0.5 rounded bg-surface-container text-surface-tint">v3.0</span>
+        </a>
+        <nav class="flex items-center gap-5 text-body-md">
+          <a class="transition-colors py-1 text-primary-container font-semibold" href="/">Dashboard</a>
+<a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/log-activity">Log Activity</a>
+<a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/ledger">History & Ledger</a>
+<a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/garage">Garage & Components</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-2">
+        <button data-action="sync-strava" class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-high hover:bg-surface-container-highest text-secondary transition-all" type="button">
+          <span class="material-symbols-outlined text-[16px]">bolt</span>
+          <span class="font-label-caps text-label-caps uppercase font-semibold">Sync Strava</span>
+        </button>
+        <div id="nav-auth-slot" class="flex items-center gap-2"></div>
+      </div>
+    </div>
+  </header>
+  <main class="w-full pt-16 min-h-[calc(100vh-64px)]">
+    
+    <div class="w-full px-margin-desktop py-space-xl max-w-[1440px] mx-auto space-y-space-xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md bg-surface-container-low p-space-lg rounded-xl shadow-md">
+        <div>
+          <div class="flex items-center gap-space-xs text-primary-fixed font-label-caps text-label-caps uppercase tracking-wider">
+            <span class="material-symbols-outlined text-[16px]">directions_bike</span>
+            <span id="dash-bike-subtitle">Polygon Path X4 • Active Rig</span>
+          </div>
+          <h1 id="dash-bike-title" class="font-headline-lg text-headline-lg text-primary font-bold tracking-tight mt-0.5">Polygon Path X4</h1>
+          <p id="dash-bike-specs" class="font-telemetry-data text-telemetry-data text-on-surface-variant mt-1">50-34T chainring • 11-36T cassette • 700x32c / 700x38c</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-space-sm">
+          <button onclick="window.GearTrackUI.openAddComponentModal()" class="flex items-center gap-space-xs px-space-md py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-secondary font-label-caps text-label-caps uppercase font-semibold transition-all" type="button">
+            <span class="material-symbols-outlined text-[18px]">add_box</span>
+            <span>+ Add Component</span>
+          </button>
+          <a href="/log-activity" class="flex items-center gap-space-xs px-space-md py-2 rounded-xl bg-primary-container hover:bg-surface-tint text-on-primary font-headline-sm text-body-md font-bold shadow-lg transition-all">
+            <span class="material-symbols-outlined text-[20px]">add_circle</span>
+            <span>+ Log Ride / Service</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter-desktop">
+        <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md">
+          <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Attention Required</span>
+          <div id="kpi-attention-count" class="font-telemetry-metric-lg text-telemetry-metric-lg font-bold text-error mt-2">-- Items</div>
+          <div id="kpi-attention-list" class="mt-2 font-telemetry-data text-body-sm text-on-surface-variant">Memuat data komponen...</div>
+        </div>
+        <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md">
+          <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Total Distance ODO</span>
+          <div class="mt-2 flex items-baseline gap-1">
+            <span id="kpi-total-odo" class="font-telemetry-metric-lg text-telemetry-metric-lg font-bold text-primary">0.0</span>
+            <span class="font-label-caps text-label-caps text-primary-fixed uppercase">KM</span>
+          </div>
+          <div id="kpi-rides-count" class="mt-2 font-telemetry-data text-body-sm text-tertiary-fixed">0 completed rides</div>
+        </div>
+        <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md">
+          <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">YTD Maintenance Spend</span>
+          <div id="kpi-ytd-spend" class="font-telemetry-metric-md text-telemetry-metric-md font-bold text-primary mt-2">Rp 0</div>
+          <div id="kpi-cost-per-100" class="mt-2 font-telemetry-data text-body-sm text-on-surface-variant">Cost per 100km: Rp 0</div>
+        </div>
+        <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Cloud &amp; Sheets Backup</span>
+              <button data-action="config-sheets" title="Pengaturan Google Spreadsheet Webhook" class="text-on-surface-variant hover:text-primary transition-colors" type="button">
+                <span class="material-symbols-outlined text-[16px]">settings</span>
+              </button>
+            </div>
+            <div class="mt-2 font-body-md font-semibold text-tertiary-fixed flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-tertiary-container"></span> Supabase Connected
+            </div>
+            <div id="sheets-last-sync-text" class="mt-1 font-telemetry-data text-[11px] text-on-surface-variant">Memeriksa status backup...</div>
+          </div>
+          <div class="mt-3 flex items-center gap-1.5">
+            <button data-action="backup-sheets" class="flex-1 py-2 px-3 rounded-lg bg-surface-container hover:bg-surface-container-high text-secondary font-label-caps text-label-caps uppercase flex items-center justify-between transition-all" type="button">
+              <span>Backup Sheets</span>
+              <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
+            </button>
+            <button data-action="config-sheets" title="Atur URL Spreadsheet" class="py-2 px-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-all" type="button">
+              <span class="material-symbols-outlined text-[16px]">link</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <section class="space-y-space-md">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="font-label-caps text-label-caps text-primary-fixed uppercase tracking-wider">Installed Hardware Registry</span>
+            <h2 class="font-headline-md text-headline-md text-primary font-bold">Tracked Components Wear Ledger</h2>
+          </div>
+          <a href="/garage" class="font-label-caps text-label-caps uppercase text-secondary hover:underline">Manage Garage & Archive →</a>
+        </div>
+        <div id="live-components-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter-desktop">
+          <div class="col-span-full p-8 text-center bg-surface-container-low rounded-xl font-telemetry-data text-on-surface-variant">
+            Menghubungkan ke Supabase... Pastikan <code>SUPABASE_URL</code> &amp; <code>SUPABASE_ANON_KEY</code> sudah diatur.
+          </div>
+        </div>
+      </section>
+    </div>
+    
+  </main>
+  <footer class="w-full bg-surface-container-lowest py-6 px-margin-desktop flex flex-col md:flex-row items-center justify-between gap-4 font-telemetry-data text-body-sm text-on-surface-variant">
+    <span class="text-primary font-semibold">Bike Logbook Telemetry v3.0</span>
+    <span class="font-label-caps text-label-caps text-outline">VERCEL • SUPABASE • STRAVA API • GOOGLE SHEETS</span>
+  </footer>
+  <script type="module" src="/js/controllers/dashboard-controller.js"></script>
+  <script type="module" src="/js/controllers/app-controller.js"></script>
+</body>
+</html>
