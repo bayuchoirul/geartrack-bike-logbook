@@ -4,6 +4,27 @@ import { TelemetryService, formatIDR, formatKm } from '../services/telemetry-ser
 
 let cachedComponentRules = [];
 
+// Pasang event listener untuk tombol + Register Bike dan + Register Part
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-action="open-add-bike"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      window.GearTrackUI?.openAddBikeModal();
+    });
+  });
+
+  document.querySelectorAll('[data-action="open-add-component"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ui = window.GearTrackUI;
+      if (!ui?.AppState?.selectedBike) {
+        ui?.showToast('Daftarkan sepeda terlebih dahulu sebelum menambahkan part!', 'error');
+        ui?.openAddBikeModal();
+        return;
+      }
+      ui.openAddComponentModal();
+    });
+  });
+});
+
 async function loadComponentRules(stateRules) {
   if (Array.isArray(stateRules) && stateRules.length > 0) {
     cachedComponentRules = stateRules;
@@ -74,7 +95,7 @@ function renderComponentRules(rules) {
 }
 
 window.addEventListener('telemetry:updated', async (e) => {
-  const { bikes, archivedComps, componentRules } = e.detail.AppState;
+  const { bikes, archivedComps, rules: stateRules } = e.detail.AppState;
   const bikesGrid = document.getElementById('live-bikes-grid');
   if (!bikesGrid) return;
 
@@ -130,7 +151,7 @@ window.addEventListener('telemetry:updated', async (e) => {
     };
   });
 
-  const rules = await loadComponentRules(componentRules);
+  const rules = await loadComponentRules(stateRules);
   renderComponentRules(rules);
 
   const archEl = document.getElementById('live-archived-list');
