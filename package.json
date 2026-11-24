@@ -1,8 +1,9 @@
 {
   "name": "geartrack-bike-logbook",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "private": true,
-  "description": "GearTrack / Bike Logbook Telemetry v2.4 - Vercel & Supabase Ready",
+  "type": "module",
+  "description": "GearTrack / Bike Logbook Telemetry v2.5 - Vercel, Supabase & Strava Sync Ready",
   "scripts": {
     "dev": "npx serve .",
     "start": "npx serve ."

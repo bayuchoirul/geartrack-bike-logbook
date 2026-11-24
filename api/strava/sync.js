@@ -24,7 +24,16 @@ export default async function handler(req, res) {
       });
     }
 
-    const targetBikeId = req.body?.bikeId || null;
+    let body = req.body || {};
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        body = {};
+      }
+    }
+
+    const targetBikeId = body?.bikeId || null;
     const accessToken = await refreshStravaAccessToken(refreshToken);
     const result = await syncActivitiesFromStrava(accessToken, targetBikeId);
 
