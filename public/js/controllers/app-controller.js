@@ -14,6 +14,33 @@ export const AppState = {
   settings: null
 };
 
+function splitWheelAndTireSpec(bike = {}) {
+  if (bike.wheel_spec || bike.tire_spec) {
+    return {
+      wheelSpec: String(bike.wheel_spec || '').trim(),
+      tireSpec: String(bike.tire_spec || '').trim()
+    };
+  }
+
+  const raw = String(bike.wheel_tire_spec || '').trim();
+  if (!raw) {
+    return { wheelSpec: '', tireSpec: '' };
+  }
+
+  const tireMatch = raw.match(/\b(\d{2,3}(?:\.\d+)?[x×]\d{2,3}(?:\.\d+)?[a-zA-Z]*)\b/i);
+  if (tireMatch) {
+    const tireSpec = tireMatch[1].replace('×', 'x');
+    const wheelSpec = raw
+      .replace(tireMatch[0], '')
+      .replace(/[\s•/|,-]+$/g, '')
+      .replace(/^[\s•/|,-]+/g, '')
+      .trim();
+    return { wheelSpec, tireSpec };
+  }
+
+  return { wheelSpec: raw, tireSpec: '' };
+}
+
 export function showToast(message, type = 'success') {
   let toast = document.getElementById('global-telemetry-toast');
   if (!toast) {
@@ -274,13 +301,17 @@ export function openAddBikeModal() {
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Wheel & Tire Spec</label>
-            <input type="text" name="wheel_tire_spec" placeholder="700x32c / 700x38c" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
+            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Wheel Spec</label>
+            <input type="text" name="wheel_spec" placeholder="e.g. Fulcrum Racing 7" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
           </div>
           <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Initial Odometer (KM)</label>
-            <input type="number" step="0.1" name="odometer_km" value="0" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
+            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Tire Spec</label>
+            <input type="text" name="tire_spec" placeholder="e.g. 700x32c" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
           </div>
+        </div>
+        <div>
+          <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Initial Odometer (KM)</label>
+          <input type="number" step="0.1" name="odometer_km" value="0" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
         </div>
         <label class="flex items-center gap-2 text-on-surface cursor-pointer">
           <input type="checkbox" name="is_default" checked class="accent-primary-container"/>
@@ -297,13 +328,18 @@ export function openAddBikeModal() {
       document.getElementById('form-add-bike').addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
+        const wheelSpec = String(fd.get('wheel_spec') || '').trim();
+        const tireSpec = String(fd.get('tire_spec') || '').trim();
+
         try {
           const newBike = await TelemetryService.createBike({
             name: fd.get('name'),
             subtitle: fd.get('subtitle'),
             groupset_spec: fd.get('groupset_spec'),
             drivetrain_ratio: fd.get('drivetrain_ratio'),
-            wheel_tire_spec: fd.get('wheel_tire_spec'),
+            wheel_spec: wheelSpec,
+            tire_spec: tireSpec,
+            wheel_tire_spec: [wheelSpec, tireSpec].filter(Boolean).join(' '),
             odometer_km: Number(fd.get('odometer_km')) || 0,
             is_default: fd.get('is_default') === 'on',
             status: 'in_service'
@@ -322,6 +358,8 @@ export function openAddBikeModal() {
 
 export function openEditBikeModal(bike) {
   if (!bike) return;
+  const { wheelSpec, tireSpec } = splitWheelAndTireSpec(bike);
+
   openModal({
     eyebrow: 'FLEET CONFIGURATION',
     title: `Edit Bicycle: ${bike.name}`,
@@ -347,13 +385,17 @@ export function openEditBikeModal(bike) {
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Wheel &amp; Tire Spec</label>
-            <input type="text" name="wheel_tire_spec" value="${bike.wheel_tire_spec || ''}" placeholder="700x32c / 700x38c" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
+            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Wheel Spec</label>
+            <input type="text" name="wheel_spec" value="${wheelSpec}" placeholder="e.g. Fulcrum Racing 7" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
           </div>
           <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Current Odometer (KM)</label>
-            <input type="number" step="0.1" name="odometer_km" required value="${Number(bike.odometer_km) || 0}" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
+            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Tire Spec</label>
+            <input type="text" name="tire_spec" value="${tireSpec}" placeholder="e.g. 700x32c" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
           </div>
+        </div>
+        <div>
+          <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Current Odometer (KM)</label>
+          <input type="number" step="0.1" name="odometer_km" required value="${Number(bike.odometer_km) || 0}" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
         </div>
         <div class="grid grid-cols-2 gap-3 items-center">
           <div>
@@ -385,12 +427,17 @@ export function openEditBikeModal(bike) {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Saving...';
 
+        const nextWheelSpec = String(fd.get('wheel_spec') || '').trim();
+        const nextTireSpec = String(fd.get('tire_spec') || '').trim();
+
         const updates = {
           name: String(fd.get('name') || '').trim(),
           subtitle: String(fd.get('subtitle') || '').trim(),
           groupset_spec: String(fd.get('groupset_spec') || '').trim(),
           drivetrain_ratio: String(fd.get('drivetrain_ratio') || '').trim(),
-          wheel_tire_spec: String(fd.get('wheel_tire_spec') || '').trim(),
+          wheel_spec: nextWheelSpec,
+          tire_spec: nextTireSpec,
+          wheel_tire_spec: [nextWheelSpec, nextTireSpec].filter(Boolean).join(' '),
           odometer_km: Number(fd.get('odometer_km')) || 0,
           status: String(fd.get('status') || 'in_service'),
           is_default: fd.get('is_default') === 'on'
@@ -577,7 +624,6 @@ export async function openAddComponentModal() {
   const defaultBike = AppState.selectedBike || bikes.find(b => b.is_default) || bikes[0];
   if (!defaultBike) return;
 
-  // Ambil daftar rules dari AppState, cache window, atau langsung dari Supabase component_rules
   let rules = Array.isArray(AppState.rules) && AppState.rules.length > 0
     ? AppState.rules
     : (Array.isArray(window.GearTrackRules) && window.GearTrackRules.length > 0 ? window.GearTrackRules : []);
@@ -598,7 +644,6 @@ export async function openAddComponentModal() {
     }
   }
 
-  // Fallback jika tabel component_rules masih kosong
   if (!rules.length) {
     rules = [
       { category_name: 'Bicycle Chain', default_max_km: 3000, default_max_months: 6, calibration_note: 'Standar chain stretch 0.5% - 0.75%' },
@@ -698,7 +743,6 @@ export async function openAddComponentModal() {
         }
       });
 
-      // Sinkronkan Lifespan (KM), Max Months, & catatan dari baris component_rules yang dipilih
       categorySelect?.addEventListener('change', () => {
         const selectedRule = rules.find(r => r.category_name === categorySelect.value);
         if (!selectedRule) return;
@@ -884,41 +928,6 @@ export async function refreshAllData() {
     stravaBtns.forEach(btn => {
       btn.classList.add('hidden');
       btn.setAttribute('aria-hidden', 'true');
-      // if (AppState.settings?.strava_connected) {
-      //   btn.classList.add('border', 'border-tertiary-container/40');
-      // }
-      // btn.onclick = async () => {
-      //   if (btn.disabled) return;
-      //   btn.disabled = true;
-      //   const labelSpan = btn.querySelector('span:last-child');
-      //   const origLabel = labelSpan ? labelSpan.textContent : 'Sync Strava';
-      //   if (labelSpan) labelSpan.textContent = 'Syncing...';
-
-      //   try {
-      //     showToast('Menghubungkan ke Strava API...');
-      //     const res = await TelemetryService.triggerStravaSync(AppState.selectedBike?.id || null);
-
-      //     if (res?.needsAuth && res?.authUrl) {
-      //       showToast('Mengalihkan ke halaman login Strava OAuth...');
-      //       window.location.href = res.authUrl;
-      //       return;
-      //     }
-
-      //     const count = res?.syncedCount || 0;
-      //     const km = res?.totalKmAdded || 0;
-      //     if (count > 0) {
-      //       showToast(`Strava Synced: +${count} aktivitas (+${formatKm(km)} km) masuk ke ${res.bikeName || 'sepeda'}!`);
-      //     } else {
-      //       showToast('Strava sudah sinkron — tidak ada aktivitas baru.');
-      //     }
-      //     await refreshAllData();
-      //   } catch (err) {
-      //     showToast(err.message || 'Gagal sinkronisasi Strava', 'error');
-      //   } finally {
-      //     btn.disabled = false;
-      //     if (labelSpan) labelSpan.textContent = origLabel;
-      //   }
-      // };
     });
 
     const sheetsBtns = document.querySelectorAll('[data-action="backup-sheets"]');
