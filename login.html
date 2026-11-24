@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Sign In &amp; Register • Bike Logbook Telemetry v2.7</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-tint": "#abd600",
+            "on-secondary": "#003640",
+            "secondary": "#4cd7f6",
+            "error-container": "#93000a",
+            "on-surface": "#dce1fb",
+            "on-background": "#dce1fb",
+            "surface-container-highest": "#2e3447",
+            "on-primary": "#283500",
+            "error": "#ffb4ab",
+            "on-surface-variant": "#c4c9ac",
+            "surface-container-lowest": "#070d1f",
+            "primary": "#ffffff",
+            "on-error": "#690005",
+            "primary-container": "#c3f400",
+            "surface-container": "#191f31",
+            "tertiary-container": "#6ffbbe",
+            "surface-container-high": "#23293c",
+            "surface-container-low": "#151b2d",
+            "background": "#0c1324",
+            "tertiary-fixed": "#6ffbbe",
+            "outline-variant": "#444933",
+            "primary-fixed": "#c3f400",
+            "secondary-container": "#03b5d3",
+            "tertiary-fixed-dim": "#4edea3",
+            "outline": "#8e9379",
+            "surface": "#0c1324"
+          },
+          fontFamily: {
+            "headline-lg": ["Space Grotesk"],
+            "headline-md": ["Space Grotesk"],
+            "headline-sm": ["Space Grotesk"],
+            "body-md": ["Inter"],
+            "body-sm": ["Inter"],
+            "telemetry-data": ["JetBrains Mono"],
+            "telemetry-metric-md": ["JetBrains Mono"],
+            "telemetry-metric-lg": ["JetBrains Mono"],
+            "label-caps": ["JetBrains Mono"]
+          },
+          fontSize: {
+            "headline-lg": ["32px", { lineHeight: "38px", fontWeight: "600" }],
+            "headline-md": ["22px", { lineHeight: "28px", fontWeight: "600" }],
+            "headline-sm": ["18px", { lineHeight: "24px", fontWeight: "600" }],
+            "body-md": ["14px", { lineHeight: "20px" }],
+            "body-sm": ["12px", { lineHeight: "16px" }],
+            "telemetry-data": ["13px", { lineHeight: "18px" }],
+            "telemetry-metric-md": ["20px", { lineHeight: "26px", fontWeight: "600" }],
+            "telemetry-metric-lg": ["30px", { lineHeight: "34px", fontWeight: "700" }],
+            "label-caps": ["11px", { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "600" }]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface font-body-md text-on-surface antialiased min-h-screen flex flex-col justify-between selection:bg-primary-container selection:text-on-primary">
+  <!-- Minimalist Top Telemetry Bar -->
+  <header class="w-full bg-surface-container-lowest/90 backdrop-blur-xl border-b border-outline-variant/20">
+    <div class="max-w-[1280px] mx-auto h-16 px-6 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-primary-container/15 border border-primary-container/40 flex items-center justify-center text-primary-container">
+          <span class="material-symbols-outlined text-[20px]">directions_bike</span>
+        </div>
+        <span class="font-headline-sm text-headline-sm font-bold text-primary">Bike Logbook</span>
+        <span class="font-label-caps text-label-caps uppercase px-1.5 py-0.5 rounded bg-surface-container text-surface-tint">v2.7</span>
+      </div>
+      <div class="flex items-center gap-2 font-label-caps text-label-caps uppercase text-secondary">
+        <span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span>
+        <span>SUPABASE AUTH GATEWAY</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Two-Column Auth Workspace -->
+  <main class="flex-1 flex items-center justify-center px-4 py-10">
+    <div class="w-full max-w-[1080px] grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+      
+      <!-- Left Column: Telemetry Brand & Hardware Preview (Desktop) -->
+      <section class="hidden lg:flex lg:col-span-6 bg-surface-container-low border border-outline-variant/25 rounded-2xl p-8 flex-col justify-between relative overflow-hidden">
+        <div class="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-primary-container/5 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 rounded-full bg-secondary/5 blur-3xl pointer-events-none"></div>
+
+        <div class="space-y-4 relative z-10">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary/10 border border-secondary/30 text-secondary font-label-caps text-label-caps uppercase">
+            <span class="material-symbols-outlined text-[14px]">precision_manufacturing</span>
+            Drivetrain &amp; Lifecycle Telemetry
+          </span>
+          <h1 class="font-headline-lg text-headline-lg text-primary font-bold tracking-tight leading-tight">
+            Every Kilometer Tracked.<br/>Every Component Calibrated.
+          </h1>
+          <p class="text-on-surface-variant text-body-md leading-relaxed">
+            Pantau keausan rantai, ban, cassette, dan bearing secara otomatis dari aktivitas Strava maupun log manual dalam satu konsol telemetri presisi.
+          </p>
+        </div>
+
+        <!-- Live Hardware Wear Preview Widget -->
+        <div class="bg-surface-container-lowest/90 border border-outline-variant/30 rounded-xl p-5 space-y-4 relative z-10 shadow-xl">
+          <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+            <div>
+              <span class="font-label-caps text-label-caps uppercase text-primary-fixed">ACTIVE RIG TELEMETRY</span>
+              <div class="font-headline-sm text-primary font-bold">Polygon Path X4 • Shimano 105</div>
+            </div>
+            <div class="text-right font-telemetry-data">
+              <div class="text-primary font-bold">7,253.3 km</div>
+              <div class="text-[11px] text-tertiary-fixed">Strava Synced</div>
+            </div>
+          </div>
+
+          <div class="space-y-3 font-telemetry-data text-body-sm">
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="text-on-surface">Shimano CN-HG601 Chain</span>
+                <span class="text-error font-bold">92.0% • Replace</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden">
+                <div class="h-full bg-error rounded-full" style="width: 92%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="text-on-surface">Vittoria Terreno Dry 700x38c</span>
+                <span class="text-secondary font-bold">74.0% • Monitor</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden">
+                <div class="h-full bg-secondary rounded-full" style="width: 74%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="text-on-surface">CS-HG700 11-36T Cassette</span>
+                <span class="text-tertiary-fixed font-bold">48.0% • Optimal</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden">
+                <div class="h-full bg-tertiary-container rounded-full" style="width: 48%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-body-sm font-telemetry-data text-outline relative z-10 pt-2">
+          <span>SUPABASE ROW-LEVEL SECURITY</span>
+          <span>STRAVA OAUTH 2.0</span>
+        </div>
+      </section>
+
+      <!-- Right Column: Interactive Sign In / Sign Up Card -->
+      <section class="lg:col-span-6 bg-surface-container-low border border-outline-variant/25 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col justify-center">
+        <div class="max-w-md w-full mx-auto space-y-6">
+          
+          <!-- Header & Mode Switcher -->
+          <div class="space-y-4">
+            <div>
+              <span class="font-label-caps text-label-caps uppercase text-primary-fixed tracking-wider">RIDER ACCESS CONSOLE</span>
+              <h2 class="font-headline-md text-headline-md text-primary font-bold mt-0.5">Authenticate Your Garage</h2>
+            </div>
+
+            <!-- Segmented Tabs -->
+            <div class="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-container-lowest border border-outline-variant/20" role="tablist">
+              <button id="tab-signin" type="button" role="tab" class="flex-1 py-2.5 rounded-lg bg-surface-container-high text-primary-container font-label-caps text-label-caps uppercase font-bold transition-all shadow">
+                Sign In
+              </button>
+              <button id="tab-signup" type="button" role="tab" class="flex-1 py-2.5 rounded-lg text-on-surface-variant hover:text-primary font-label-caps text-label-caps uppercase font-bold transition-all">
+                Sign Up
+              </button>
+            </div>
+          </div>
+
+          <!-- Feedback / Error Banner -->
+          <div id="auth-alert" class="hidden p-3.5 rounded-xl border flex items-start gap-2.5 text-body-sm">
+            <span id="auth-alert-icon" class="material-symbols-outlined text-[18px] mt-0.5 flex-shrink-0">error</span>
+            <span id="auth-alert-text" class="leading-snug"></span>
+          </div>
+
+          <!-- ==================== 1. SIGN IN FORM ==================== -->
+          <form id="form-signin" class="space-y-4">
+            <div>
+              <label for="signin-email" class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1.5">Email Address</label>
+              <div class="relative">
+                <span class="material-symbols-outlined text-[18px] text-outline absolute left-3.5 top-1/2 -translate-y-1/2">mail</span>
+                <input id="signin-email" name="email" type="email" required autocomplete="email" placeholder="bayu@rider.id"
+                  class="w-full bg-surface-container-lowest border border-outline-variant/40 focus:border-primary-container focus:outline-none text-primary font-telemetry-data pl-10 pr-3.5 py-3 rounded-xl transition-colors"/>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="signin-password" class="font-label-caps text-label-caps uppercase text-on-surface-variant">Password</label>
+                <button id="btn-open-forgot" type="button" class="font-label-caps text-label-caps uppercase text-secondary hover:underline">
+                  Forgot Password?
+                </button>
+              </div>
+              <div class="relative">
+                <span class="material-symbols-outlined text-[18px] text-outline absolute left-3.5 top-1/2 -translate-y-1/2">lock</span>
+                <input id="signin-password" name="password" type="password" required autocomplete="current-password" placeholder="••••••••"
+                  class="w-full bg-surface-container-lowest border border-outline-variant/40 focus:border-primary-container focus:outline-none text-primary font-telemetry-data pl-10 pr-11 py-3 rounded-xl transition-colors"/>
+                <button type="button" data-toggle-pw="signin-password" aria-label="Toggle password visibility"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary p-1">
+                  <span class="material-symbols-outlined text-[18px]">visibility</span>
+                </button>
+              </div>
+            </div>
+
+            <button id="btn-submit-signin" type="submit"
+              class="w-full py-3.5 px-5 rounded-xl bg-primary-container hover:bg-surface-tint text-on-primary font-headline-sm text-body-md font-bold shadow-lg transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-[20px]">login</span>
+              <span>Sign In to Garage</span>
+            </button>
+          </form>
+
+          <!-- ==================== 2. SIGN UP FORM ==================== -->
+          <form id="form-signup" class="hidden space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="signup-name" class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1.5">Full Name</label>
+                <input id="signup-name" name="full_name" type="text" required autocomplete="name" placeholder="Bayu Choirul Imam"
+                  class="w-full bg-surface-container-lowest border border-outline-variant/40 focus:border-primary-container focus:outline-none text-primary px-3.5 py-2.5 rounded-xl transition-colors"/>
+              </div>
+              <div>
+                <label for="signup-handle" class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1.5">Rider Handle</label>
+                <input id="signup-handle" name="handle" type="text" placeholder="@bayu_rides"
+                  class="w-full bg-surface-container-lowest border border-outline-variant/40 focus:border-primary-container focus:outline-none text-secondary font-telemetry-data px-3.5 py-2.5 rounded-xl transition-colors"/>
+              </div>
+            </div>
+
+            <div>
+              <label for="signup-email" class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1.5">Email Address</label>
+              <div class="relative">
+                <span class="material-symbols-outlined text-[18px] text-outline absolute left-3.5 top-1/2 -translate-y-1/2">mail</span>
+                <input id="signup-email" name="email" type="email" required autocomplete="email" placeholder="bayu@rider.id"
+                  class="w-full bg-surface-container-lowest border border-outline-variant/40 focus:border-primary-container focus:outline-none text-primary font-telemetry-data pl-10 pr-3.5 py-2.5 rounded-xl transition-colors"/>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="signup-password" class="font-label-caps text-label-caps uppercase text-on-surface-variant">Password (Min. 6 Chars)</label>
+                <span id="pw-strength-label" class="font-label-caps text-label-caps uppercase text-on-surface-variant">Empty</span>
+              </div>
+              <div class="relative">
+                <span class="material-symbols-outlined text-[18px] text-outline absolute left-3.5 top-1/2 -translate-y-1/2">key</span>
+                <input id="signup-password" name="password" type="password" required minlength="6" autocomplete="new-password" placeholder="Buat password kuat"
+                  class="w-full bg-surface-container-lowest border border-outline-variant/40 focus:border-primary-container focus:outline-none text-primary font-telemetry-data pl-10 pr-11 py-2.5 rounded-xl transition-colors"/>
+                <button type="button" data-toggle-pw="signup-password" aria-label="Toggle password visibility"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary p-1">
+                  <span class="material-symbols-outlined text-[18px]">visibility</span>
+                </button>
+              </div>
+              <!-- 4-Segment Password Strength Meter -->
+              <div class="grid grid-cols-4 gap-1.5 mt-2">
+                <div id="pw-bar-1" class="h-1.5 flex-1 rounded-full bg-surface-container-highest transition-all"></div>
+                <div id="pw-bar-2" class="h-1.5 flex-1 rounded-full bg-surface-container-highest transition-all"></div>
+                <div id="pw-bar-3" class="h-1.5 flex-1 rounded-full bg-surface-container-highest transition-all"></div>
+                <div id="pw-bar-4" class="h-1.5 flex-1 rounded-full bg-surface-container-highest transition-all"></div>
+              </div>
+            </div>
+
+            <div>
+              <label for="signup-confirm" class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1.5">Confirm Password</label>
+              <div class="relative">
+                <span class="material-symbols-outlined text-[18px] text-outline absolute left-3.5 top-1/2 -translate-y-1/2">verified_user</span>
+                <input id="signup-confirm" name="confirm_password" type="password" required minlength="6" autocomplete="new-password" placeholder="Ulangi password"
+                  class="w-full bg-surface-container-lowest border border-outline-variant/40 focus:border-primary-container focus:outline-none text-primary font-telemetry-data pl-10 pr-11 py-2.5 rounded-xl transition-colors"/>
+                <button type="button" data-toggle-pw="signup-confirm" aria-label="Toggle confirm password visibility"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary p-1">
+                  <span class="material-symbols-outlined text-[18px]">visibility</span>
+                </button>
+              </div>
+            </div>
+
+            <button id="btn-submit-signup" type="submit"
+              class="w-full py-3.5 px-5 rounded-xl bg-primary-container hover:bg-surface-tint text-on-primary font-headline-sm text-body-md font-bold shadow-lg transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-[20px]">person_add</span>
+              <span>Create Rider Account</span>
+            </button>
+          </form>
+
+          <!-- ==================== 3. FORGOT PASSWORD FORM ==================== -->
+          <form id="form-forgot" class="hidden space-y-4">
+            <div class="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-body-sm text-on-surface-variant">
+              Masukkan alamat email terdaftar Anda. Kami akan mengirimkan tautan pemulihan password melalui Supabase Auth.
+            </div>
+            <div>
+              <label for="forgot-email" class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1.5">Registered Email</label>
+              <input id="forgot-email" name="email" type="email" required placeholder="bayu@rider.id"
+                class="w-full bg-surface-container-lowest border border-outline-variant/40 focus:border-secondary focus:outline-none text-primary font-telemetry-data px-3.5 py-3 rounded-xl transition-colors"/>
+            </div>
+            <div class="flex items-center gap-2.5 pt-1">
+              <button id="btn-back-signin" type="button" class="px-4 py-3 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-caps text-label-caps uppercase font-bold">
+                ← Back
+              </button>
+              <button id="btn-submit-forgot" type="submit" class="flex-1 py-3 px-4 rounded-xl bg-secondary text-on-secondary font-label-caps text-label-caps uppercase font-bold hover:brightness-110 transition-all">
+                Send Reset Link
+              </button>
+            </div>
+          </form>
+
+          <!-- ==================== 4. EMAIL VERIFICATION NOTICE ==================== -->
+          <div id="verify-email-panel" class="hidden p-5 rounded-xl bg-surface-container-lowest border border-tertiary-container/40 space-y-4 text-center">
+            <div class="w-12 h-12 rounded-full bg-tertiary-container/15 text-tertiary-fixed flex items-center justify-center mx-auto">
+              <span class="material-symbols-outlined text-[26px]">mark_email_read</span>
+            </div>
+            <div class="space-y-1">
+              <h3 class="font-headline-sm text-primary font-bold">Verifikasi Email Anda</h3>
+              <p class="text-body-sm text-on-surface-variant">
+                Tautan aktivasi telah dikirim ke <strong id="verify-email-address" class="text-primary font-telemetry-data"></strong>. Klik link tersebut lalu masuk ke akun Anda.
+              </p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 pt-1">
+              <button id="btn-resend-verify" type="button" class="flex-1 py-2.5 px-3 rounded-lg bg-surface-container-high text-secondary font-label-caps text-label-caps uppercase font-bold">
+                Resend Email
+              </button>
+              <button id="btn-verified-signin" type="button" class="flex-1 py-2.5 px-3 rounded-lg bg-primary-container text-on-primary font-label-caps text-label-caps uppercase font-bold">
+                Back to Sign In
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="w-full bg-surface-container-lowest py-5 px-6 border-t border-outline-variant/15 flex flex-col sm:flex-row items-center justify-between gap-3 font-telemetry-data text-body-sm text-on-surface-variant">
+    <span class="text-primary font-semibold">Bike Logbook Telemetry v2.7</span>
+    <span class="font-label-caps text-label-caps text-outline">VERCEL • SUPABASE AUTH • STRAVA API</span>
+  </footer>
+
+  <script type="module">
+    import { initAuthPage } from './js/auth-service.js';
+    document.addEventListener('DOMContentLoaded', () => {
+      initAuthPage();
+    });
+  </script>
+</body>
+</html>

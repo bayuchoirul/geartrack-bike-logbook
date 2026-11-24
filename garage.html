@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>Bike Logbook Telemetry v2.4</title>
+  <title>Bike Logbook Telemetry v2.7</title>
   <link href="https://fonts.googleapis.com" rel="preconnect"/>
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
@@ -84,7 +84,7 @@
       <div class="flex items-center gap-6">
         <a href="/" class="flex items-center gap-2">
           <span class="font-headline-sm text-headline-sm font-bold text-primary">Bike Logbook</span>
-          <span class="font-label-caps text-label-caps uppercase px-1.5 py-0.5 rounded bg-surface-container text-surface-tint">v2.4</span>
+          <span class="font-label-caps text-label-caps uppercase px-1.5 py-0.5 rounded bg-surface-container text-surface-tint">v2.7</span>
         </a>
         <nav class="flex items-center gap-5 text-body-md">
           <a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/">Dashboard</a>
@@ -98,6 +98,7 @@
           <span class="material-symbols-outlined text-[16px]">bolt</span>
           <span class="font-label-caps text-label-caps uppercase font-semibold">Sync Strava</span>
         </button>
+        <div id="nav-auth-slot" class="flex items-center gap-2"></div>
       </div>
     </div>
   </header>
@@ -129,32 +130,57 @@
       import { TelemetryService, formatIDR, formatKm } from './js/supabase-service.js';
       window.addEventListener('telemetry:updated', (e) => {
         const { bikes, archivedComps } = e.detail.AppState;
-        document.getElementById('live-bikes-grid').innerHTML = bikes.map(b => `
-          <div class="bg-surface-container-low p-6 rounded-xl space-y-3 shadow-md">
-            <div class="flex justify-between items-start">
-              <div>
-                <h3 class="font-headline-md text-headline-md text-primary font-bold">${b.name}</h3>
-                <p class="text-on-surface-variant text-body-sm">${b.subtitle || ''}</p>
+        const bikesGrid = document.getElementById('live-bikes-grid');
+        if (!bikes.length) {
+          bikesGrid.innerHTML = `
+            <div class="col-span-full bg-surface-container-low p-8 rounded-xl text-center space-y-3">
+              <p class="font-telemetry-data text-on-surface-variant">Belum ada sepeda terdaftar di garasi.</p>
+              <button onclick="window.GearTrackUI.openAddBikeModal()" class="px-4 py-2 rounded-xl bg-primary-container text-on-primary font-label-caps uppercase font-bold" type="button">+ Register Bike</button>
+            </div>
+          `;
+        } else {
+          bikesGrid.innerHTML = bikes.map(b => `
+            <div class="bg-surface-container-low p-6 rounded-xl space-y-3 shadow-md">
+              <div class="flex justify-between items-start gap-2">
+                <div>
+                  <h3 class="font-headline-md text-headline-md text-primary font-bold">${b.name}</h3>
+                  <p class="text-on-surface-variant text-body-sm">${b.subtitle || ''}</p>
+                </div>
+                <span class="px-2.5 py-1 rounded font-label-caps text-label-caps uppercase whitespace-nowrap ${b.is_default ? 'bg-tertiary-container/20 text-tertiary-fixed' : 'bg-surface-container text-on-surface-variant'}">
+                  ${b.is_default ? 'Active Default' : b.status}
+                </span>
               </div>
-              <span class="px-2.5 py-1 rounded font-label-caps text-label-caps uppercase ${b.is_default ? 'bg-tertiary-container/20 text-tertiary-fixed' : 'bg-surface-container text-on-surface-variant'}">
-                ${b.is_default ? 'Active Default' : b.status}
-              </span>
+              <div class="font-telemetry-data text-body-sm text-on-surface-variant">
+                ${b.groupset_spec || ''} • ${b.drivetrain_ratio || ''} • ${b.wheel_tire_spec || ''}
+              </div>
+              <div class="flex items-center justify-between gap-2 pt-2">
+                <div class="font-telemetry-metric-md text-primary-container font-bold">${formatKm(b.odometer_km)} km</div>
+                <div class="flex items-center gap-2">
+                  ${!b.is_default ? `<button data-set-default="${b.id}" class="px-3 py-1.5 rounded bg-surface-container-high hover:bg-surface-container-highest text-secondary font-label-caps text-label-caps uppercase transition-all" type="button">Set Active</button>` : ''}
+                  <button data-delete-bike="${b.id}" class="px-3 py-1.5 rounded bg-error-container/30 hover:bg-error text-error hover:text-on-error font-label-caps text-label-caps uppercase transition-all flex items-center gap-1" type="button" title="Delete Registered Bike">
+                    <span class="material-symbols-outlined text-[15px]">delete</span>
+                    <span>Delete</span>
+                  </button>
+                </div>
+              </div>
             </div>
-            <div class="font-telemetry-data text-body-sm text-on-surface-variant">
-              ${b.groupset_spec || ''} • ${b.drivetrain_ratio || ''} • ${b.wheel_tire_spec || ''}
-            </div>
-            <div class="flex items-center justify-between pt-2">
-              <div class="font-telemetry-metric-md text-primary-container font-bold">${formatKm(b.odometer_km)} km</div>
-              ${!b.is_default ? `<button data-set-default="${b.id}" class="px-3 py-1.5 rounded bg-surface-container-high text-secondary font-label-caps text-label-caps uppercase">Set Active</button>` : ''}
-            </div>
-          </div>
-        `).join('');
+          `).join('');
+        }
 
         document.querySelectorAll('[data-set-default]').forEach(btn => {
           btn.onclick = async () => {
             await TelemetryService.setDefaultBike(btn.dataset.setDefault);
             window.GearTrackUI.showToast('Active bicycle switched!');
             await window.GearTrackUI.refreshAllData();
+          };
+        });
+
+        document.querySelectorAll('[data-delete-bike]').forEach(btn => {
+          btn.onclick = () => {
+            const targetBike = bikes.find(item => item.id === btn.dataset.deleteBike);
+            if (targetBike) {
+              window.GearTrackUI.openDeleteBikeModal(targetBike);
+            }
           };
         });
 
@@ -183,7 +209,7 @@
     
   </main>
   <footer class="w-full bg-surface-container-lowest py-6 px-margin-desktop flex flex-col md:flex-row items-center justify-between gap-4 font-telemetry-data text-body-sm text-on-surface-variant">
-    <span class="text-primary font-semibold">Bike Logbook Telemetry v2.4</span>
+    <span class="text-primary font-semibold">Bike Logbook Telemetry v2.7</span>
     <span class="font-label-caps text-label-caps text-outline">VERCEL • SUPABASE • STRAVA API • GOOGLE SHEETS</span>
   </footer>
   <script type="module" src="./js/app-controller.js"></script>

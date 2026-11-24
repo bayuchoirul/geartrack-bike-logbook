@@ -57,6 +57,32 @@ export const TelemetryService = {
     return data;
   },
 
+  async deleteBike(bikeId) {
+    const { supabase } = await getSupabase();
+    const { data: targetBike, error: fetchErr } = await supabase
+      .from('bikes')
+      .select('id, name, is_default')
+      .eq('id', bikeId)
+      .single();
+    if (fetchErr) throw fetchErr;
+
+    const { error: delErr } = await supabase
+      .from('bikes')
+      .delete()
+      .eq('id', bikeId);
+    if (delErr) throw delErr;
+
+    let nextActiveBike = null;
+    if (targetBike?.is_default) {
+      const remaining = await this.getBikes();
+      if (remaining.length > 0) {
+        nextActiveBike = await this.setDefaultBike(remaining[0].id);
+      }
+    }
+
+    return { deletedId: bikeId, nextActiveBike };
+  },
+
   async getComponents(bikeId, status = 'active') {
     const { supabase } = await getSupabase();
     let query = supabase

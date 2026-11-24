@@ -1,7 +1,9 @@
 // js/app-controller.js
 import { TelemetryService, formatIDR, formatKm } from './supabase-service.js';
+import { AuthService } from './auth-service.js';
 
 export const AppState = {
+  currentUser: null,
   bikes: [],
   selectedBike: null,
   activeComps: [],
@@ -317,6 +319,63 @@ export function openAddBikeModal() {
   });
 }
 
+export function openDeleteBikeModal(bike) {
+  if (!bike) return;
+  const otherBikes = AppState.bikes.filter(b => b.id !== bike.id);
+  const nextBikeHint = bike.is_default && otherBikes.length > 0
+    ? `<div class="p-2.5 rounded-lg bg-secondary/10 border border-secondary/30 text-secondary text-body-sm">Sepeda <strong>${otherBikes[0].name}</strong> akan otomatis dijadikan <strong>Active Default</strong> pengganti.</div>`
+    : '';
+
+  openModal({
+    eyebrow: 'FLEET DECOMMISSIONING',
+    title: `Delete Bicycle: ${bike.name}`,
+    bodyHtml: `
+      <form id="form-delete-bike" class="space-y-4 font-body-sm">
+        <div class="p-3 rounded-lg bg-error-container/20 border border-error/30 text-on-surface space-y-1">
+          <div class="font-telemetry-data text-error font-semibold">Peringatan: Tindakan Permanen</div>
+          <p class="text-on-surface-variant">
+            Menghapus <strong>${bike.name}</strong> (${formatKm(bike.odometer_km)} km) juga akan menghapus permanen seluruh <strong>komponen terpasang</strong>, <strong>riwayat aktivitas</strong>, dan <strong>catatan servis/biaya</strong> yang terhubung ke sepeda ini.
+          </p>
+        </div>
+
+        ${nextBikeHint}
+
+        <label class="flex items-start gap-2.5 p-3 rounded-lg bg-surface-container-lowest text-on-surface cursor-pointer">
+          <input type="checkbox" id="confirm-delete-bike-chk" required class="mt-0.5 accent-error"/>
+          <span>Saya memahami data sepeda <strong>${bike.name}</strong> beserta seluruh log terkait akan dihapus permanen.</span>
+        </label>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="cancel-del-bike-btn" class="px-4 py-2 rounded bg-surface-container-high text-on-surface font-label-caps uppercase">Cancel</button>
+          <button type="submit" id="submit-del-bike-btn" class="px-5 py-2 rounded bg-error text-on-error font-label-caps uppercase font-bold hover:brightness-110 transition-all">Delete Permanently</button>
+        </div>
+      </form>
+    `,
+    onMount: () => {
+      document.getElementById('cancel-del-bike-btn').addEventListener('click', closeModal);
+      document.getElementById('form-delete-bike').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById('submit-del-bike-btn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Deleting...';
+        try {
+          const res = await TelemetryService.deleteBike(bike.id);
+          if (AppState.selectedBike?.id === bike.id) {
+            AppState.selectedBike = res.nextActiveBike || null;
+          }
+          closeModal();
+          showToast(`Sepeda "${bike.name}" berhasil dihapus dari garasi.`);
+          await refreshAllData();
+        } catch (err) {
+          showToast(err.message || 'Gagal menghapus sepeda', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Delete Permanently';
+        }
+      });
+    }
+  });
+}
+
 export function openAddComponentModal() {
   if (!AppState.selectedBike) return;
   openModal({
@@ -497,7 +556,27 @@ export async function refreshAllData() {
       AppState.selectedBike = AppState.bikes.find(b => b.id === AppState.selectedBike.id) || AppState.bikes[0];
     }
 
-    if (!AppState.selectedBike) return;
+    if (!AppState.selectedBike) {
+      AppState.activeComps = [];
+      AppState.archivedComps = [];
+      AppState.ledger = [];
+      window.dispatchEvent(new CustomEvent('telemetry:updated', {
+        detail: {
+          AppState,
+          metrics: {
+            activeComps: [],
+            attentionComps: [],
+            totalRidesCount: 0,
+            monthKm: 0,
+            totalSpendIdr: 0,
+            partsSpendIdr: 0,
+            serviceSpendIdr: 0,
+            costPer100Km: 0
+          }
+        }
+      }));
+      return;
+    }
 
     const [metrics, archived, ledger, rules, settings] = await Promise.all([
       TelemetryService.getDashboardMetrics(AppState.selectedBike),
@@ -589,6 +668,7 @@ window.GearTrackUI = {
   AppState,
   refreshAllData,
   openAddBikeModal,
+  openDeleteBikeModal,
   openAddComponentModal,
   openArchiveReplaceModal,
   openQuickResetModal,
@@ -597,7 +677,72 @@ window.GearTrackUI = {
   formatKm
 };
 
+function renderNavbarUserBadge(user) {
+  let slot = document.getElementById('nav-auth-slot');
+  if (!slot) {
+    const syncBtn = document.querySelector('[data-action="sync-strava"]');
+    if (syncBtn && syncBtn.parentElement) {
+      slot = document.createElement('div');
+      slot.id = 'nav-auth-slot';
+      slot.className = 'flex items-center gap-2';
+      syncBtn.parentElement.appendChild(slot);
+    }
+  }
+  if (!slot) return;
+
+  if (!user) {
+    slot.innerHTML = `
+      <a href="/login" class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary-container text-on-primary font-label-caps text-label-caps uppercase font-bold hover:bg-surface-tint transition-all">
+        <span class="material-symbols-outlined text-[16px]">login</span>
+        <span>Sign In</span>
+      </a>
+    `;
+    return;
+  }
+
+  const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Rider';
+  const initials = displayName
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  slot.innerHTML = `
+    <div class="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/25" title="${user.email || ''}">
+      <span class="w-6 h-6 rounded-md bg-primary-container/20 text-primary-container font-label-caps text-[10px] font-bold flex items-center justify-center">${initials}</span>
+      <span class="font-telemetry-data text-body-sm text-on-surface max-w-[130px] truncate">${displayName}</span>
+    </div>
+    <button id="btn-nav-signout" type="button" title="Sign Out"
+      class="flex items-center gap-1 px-2.5 py-1.5 rounded bg-surface-container-high hover:bg-error-container/40 text-on-surface-variant hover:text-error transition-all">
+      <span class="material-symbols-outlined text-[16px]">logout</span>
+      <span class="hidden md:inline font-label-caps text-label-caps uppercase font-semibold">Sign Out</span>
+    </button>
+  `;
+
+  document.getElementById('btn-nav-signout')?.addEventListener('click', async () => {
+    try {
+      await AuthService.signOut();
+      window.location.replace('/login?signedout=1');
+    } catch (err) {
+      showToast(err.message || 'Gagal keluar dari sesi', 'error');
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+  const user = await AuthService.requireAuth({ redirectTo: '/login' });
+  if (!user) return;
+
+  AppState.currentUser = user;
+  renderNavbarUserBadge(user);
+
+  AuthService.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT' || !session) {
+      window.location.replace('/login?signedout=1');
+    }
+  });
+
   await refreshAllData();
 
   const params = new URLSearchParams(window.location.search);

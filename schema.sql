@@ -15,6 +15,7 @@ CREATE TABLE public.bikes (
     tire_pressure_psi TEXT,
     odometer_km NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
     status TEXT NOT NULL DEFAULT 'in_service' CHECK (status IN ('in_service', 'standby', 'retired')),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
     is_default BOOLEAN NOT NULL DEFAULT false,
     image_url TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -255,7 +256,7 @@ ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.maintenance_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rider_settings ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow all access bikes" ON public.bikes FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated users manage own or legacy bikes" ON public.bikes FOR ALL TO authenticated USING (user_id = auth.uid() OR user_id IS NULL) WITH CHECK (user_id = auth.uid() OR user_id IS NULL);
 CREATE POLICY "Allow all access rules" ON public.component_rules FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all access components" ON public.components FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all access activities" ON public.activities FOR ALL USING (true) WITH CHECK (true);
