@@ -2,13 +2,29 @@
 import { formatIDR, formatKm } from '../core/supabase-client.js';
 
 window.addEventListener('telemetry:updated', (e) => {
-  const { AppState, metrics } = e.detail;
-  const bike = AppState.selectedBike;
-  if (!bike) return;
+  const { AppState, metrics } = e.detail || {};
+  const emptyStateEl = document.getElementById('dashboard-empty-state');
+  const contentEl = document.getElementById('dashboard-content');
+
+  const bikes = AppState?.bikes || [];
+  const bike = AppState?.selectedBike || bikes[0];
+
+  // Jika tidak ada sepeda di Supabase / Registered Bicycles, sembunyikan seluruh konten Dashboard
+  if (!bike || bikes.length === 0) {
+    emptyStateEl?.classList.remove('hidden');
+    contentEl?.classList.add('hidden');
+    return;
+  }
+
+  // Tampilkan konten Dashboard jika sepeda aktif tersedia
+  emptyStateEl?.classList.add('hidden');
+  contentEl?.classList.remove('hidden');
+
+  const specs = [bike.drivetrain_ratio, bike.wheel_tire_spec].filter(Boolean).join(' • ');
 
   document.getElementById('dash-bike-title').textContent = bike.name;
-  document.getElementById('dash-bike-subtitle').textContent = bike.subtitle || 'Active Rig';
-  document.getElementById('dash-bike-specs').textContent = `${bike.drivetrain_ratio || ''} • ${bike.wheel_tire_spec || ''}`;
+  document.getElementById('dash-bike-subtitle').textContent = bike.subtitle || `${bike.name} • Active Rig`;
+  document.getElementById('dash-bike-specs').textContent = specs;
   document.getElementById('kpi-total-odo').textContent = formatKm(bike.odometer_km);
   document.getElementById('kpi-rides-count').textContent = `${metrics.totalRidesCount} completed rides (+${formatKm(metrics.monthKm)} km this month)`;
   document.getElementById('kpi-ytd-spend').textContent = formatIDR(metrics.totalSpendIdr);

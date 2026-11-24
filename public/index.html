@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>Bike Logbook Telemetry v3.0</title>
+  <title>Bike Logbook Telemetry</title>
   <link href="https://fonts.googleapis.com" rel="preconnect"/>
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
@@ -38,75 +38,95 @@
   </header>
   <main class="w-full pt-16 min-h-[calc(100vh-64px)]">
     <div class="w-full px-margin-desktop py-space-xl max-w-[1440px] mx-auto space-y-space-xl">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md bg-surface-container-low p-space-lg rounded-xl shadow-md">
-        <div>
-          <div class="flex items-center gap-space-xs text-primary-fixed font-label-caps text-label-caps uppercase tracking-wider">
-            <span class="material-symbols-outlined text-[16px]">directions_bike</span>
-            <span id="dash-bike-subtitle">Polygon Path X4 • Active Rig</span>
-          </div>
-          <h1 id="dash-bike-title" class="font-headline-lg text-headline-lg text-primary font-bold tracking-tight mt-0.5">Polygon Path X4</h1>
-          <p id="dash-bike-specs" class="font-telemetry-data text-telemetry-data text-on-surface-variant mt-1">50-34T chainring • 11-36T cassette • 700x32c / 700x38c</p>
+
+      <!-- EMPTY STATE: Tampil jika belum ada sepeda di Supabase / Registered Bicycles -->
+      <div id="dashboard-empty-state" class="bg-surface-container-low rounded-xl p-12 text-center shadow-md space-y-4">
+        <span class="material-symbols-outlined text-[40px] text-on-surface-variant">directions_bike</span>
+        <h2 class="font-headline-md text-headline-md text-primary font-bold">Belum Ada Sepeda Terdaftar</h2>
+        <p class="font-telemetry-data text-body-md text-on-surface-variant max-w-md mx-auto">
+          Daftarkan sepeda aktif Anda terlebih dahulu pada menu Garage &amp; Components untuk menampilkan data telemetri dan keausan komponen di Dashboard.
+        </p>
+        <div class="pt-2">
+          <a href="/garage" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-container hover:bg-surface-tint text-on-primary font-headline-sm text-body-md font-bold shadow-lg transition-all">
+            <span class="material-symbols-outlined text-[20px]">add_circle</span>
+            <span>Daftarkan Sepeda di Garage</span>
+          </a>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter-desktop">
-        <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md">
-          <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Attention Required</span>
-          <div id="kpi-attention-count" class="font-telemetry-metric-lg text-telemetry-metric-lg font-bold text-error mt-2">-- Items</div>
-          <div id="kpi-attention-list" class="mt-2 font-telemetry-data text-body-sm text-on-surface-variant">Memuat data komponen...</div>
-        </div>
-        <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md">
-          <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Total Distance ODO</span>
-          <div class="mt-2 flex items-baseline gap-1">
-            <span id="kpi-total-odo" class="font-telemetry-metric-lg text-telemetry-metric-lg font-bold text-primary">0.0</span>
-            <span class="font-label-caps text-label-caps text-primary-fixed uppercase">KM</span>
-          </div>
-          <div id="kpi-rides-count" class="mt-2 font-telemetry-data text-body-sm text-tertiary-fixed">0 completed rides</div>
-        </div>
-        <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md">
-          <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">YTD Maintenance Spend</span>
-          <div id="kpi-ytd-spend" class="font-telemetry-metric-md text-telemetry-metric-md font-bold text-primary mt-2">Rp 0</div>
-          <div id="kpi-cost-per-100" class="mt-2 font-telemetry-data text-body-sm text-on-surface-variant">Cost per 100km: Rp 0</div>
-        </div>
-        <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md flex flex-col justify-between">
+      <!-- KONTEN UTAMA DASHBOARD: Disembunyikan sampai data sepeda dari Supabase terdeteksi -->
+      <div id="dashboard-content" class="hidden space-y-space-xl">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md bg-surface-container-low p-space-lg rounded-xl shadow-md">
           <div>
-            <div class="flex items-center justify-between">
-              <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Cloud &amp; Sheets Backup</span>
-              <button data-action="config-sheets" title="Pengaturan Google Spreadsheet Webhook" class="text-on-surface-variant hover:text-primary transition-colors" type="button">
-                <span class="material-symbols-outlined text-[16px]">settings</span>
+            <div class="flex items-center gap-space-xs text-primary-fixed font-label-caps text-label-caps uppercase tracking-wider">
+              <span class="material-symbols-outlined text-[16px]">directions_bike</span>
+              <span id="dash-bike-subtitle"></span>
+            </div>
+            <h1 id="dash-bike-title" class="font-headline-lg text-headline-lg text-primary font-bold tracking-tight mt-0.5"></h1>
+            <p id="dash-bike-specs" class="font-telemetry-data text-telemetry-data text-on-surface-variant mt-1"></p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter-desktop">
+          <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md">
+            <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Attention Required</span>
+            <div id="kpi-attention-count" class="font-telemetry-metric-lg text-telemetry-metric-lg font-bold text-error mt-2">-- Items</div>
+            <div id="kpi-attention-list" class="mt-2 font-telemetry-data text-body-sm text-on-surface-variant">Memuat data komponen...</div>
+          </div>
+          <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md">
+            <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Total Distance ODO</span>
+            <div class="mt-2 flex items-baseline gap-1">
+              <span id="kpi-total-odo" class="font-telemetry-metric-lg text-telemetry-metric-lg font-bold text-primary">0.0</span>
+              <span class="font-label-caps text-label-caps text-primary-fixed uppercase">KM</span>
+            </div>
+            <div id="kpi-rides-count" class="mt-2 font-telemetry-data text-body-sm text-tertiary-fixed">0 completed rides</div>
+          </div>
+          <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md">
+            <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">YTD Maintenance Spend</span>
+            <div id="kpi-ytd-spend" class="font-telemetry-metric-md text-telemetry-metric-md font-bold text-primary mt-2">Rp 0</div>
+            <div id="kpi-cost-per-100" class="mt-2 font-telemetry-data text-body-sm text-on-surface-variant">Cost per 100km: Rp 0</div>
+          </div>
+          <div class="bg-surface-container-low rounded-xl p-space-lg shadow-md flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Cloud &amp; Sheets Backup</span>
+                <button data-action="config-sheets" title="Pengaturan Google Spreadsheet Webhook" class="text-on-surface-variant hover:text-primary transition-colors" type="button">
+                  <span class="material-symbols-outlined text-[16px]">settings</span>
+                </button>
+              </div>
+              <div class="mt-2 font-body-md font-semibold text-tertiary-fixed flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-tertiary-container"></span> Supabase Connected
+              </div>
+              <div id="sheets-last-sync-text" class="mt-1 font-telemetry-data text-[11px] text-on-surface-variant">Memeriksa status backup...</div>
+            </div>
+            <div class="mt-3 flex items-center gap-1.5">
+              <button data-action="backup-sheets" class="flex-1 py-2 px-3 rounded-lg bg-surface-container hover:bg-surface-container-high text-secondary font-label-caps text-label-caps uppercase flex items-center justify-between transition-all" type="button">
+                <span>Backup Sheets</span>
+                <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
+              </button>
+              <button data-action="config-sheets" title="Atur URL Spreadsheet" class="py-2 px-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-all" type="button">
+                <span class="material-symbols-outlined text-[16px]">link</span>
               </button>
             </div>
-            <div class="mt-2 font-body-md font-semibold text-tertiary-fixed flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-tertiary-container"></span> Supabase Connected
-            </div>
-            <div id="sheets-last-sync-text" class="mt-1 font-telemetry-data text-[11px] text-on-surface-variant">Memeriksa status backup...</div>
-          </div>
-          <div class="mt-3 flex items-center gap-1.5">
-            <button data-action="backup-sheets" class="flex-1 py-2 px-3 rounded-lg bg-surface-container hover:bg-surface-container-high text-secondary font-label-caps text-label-caps uppercase flex items-center justify-between transition-all" type="button">
-              <span>Backup Sheets</span>
-              <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
-            </button>
-            <button data-action="config-sheets" title="Atur URL Spreadsheet" class="py-2 px-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-all" type="button">
-              <span class="material-symbols-outlined text-[16px]">link</span>
-            </button>
           </div>
         </div>
+
+        <section class="space-y-space-md">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="font-label-caps text-label-caps text-primary-fixed uppercase tracking-wider">Installed Hardware Registry</span>
+              <h2 class="font-headline-md text-headline-md text-primary font-bold">Tracked Components Wear Ledger</h2>
+            </div>
+            <a href="/garage" class="font-label-caps text-label-caps uppercase text-secondary hover:underline">Manage Garage &amp; Archive →</a>
+          </div>
+          <div id="live-components-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter-desktop">
+            <div class="col-span-full p-8 text-center bg-surface-container-low rounded-xl font-telemetry-data text-on-surface-variant">
+              Menghubungkan ke Supabase... Pastikan <code>SUPABASE_URL</code> &amp; <code>SUPABASE_ANON_KEY</code> sudah diatur.
+            </div>
+          </div>
+        </section>
       </div>
 
-      <section class="space-y-space-md">
-        <div class="flex items-center justify-between">
-          <div>
-            <span class="font-label-caps text-label-caps text-primary-fixed uppercase tracking-wider">Installed Hardware Registry</span>
-            <h2 class="font-headline-md text-headline-md text-primary font-bold">Tracked Components Wear Ledger</h2>
-          </div>
-          <a href="/garage" class="font-label-caps text-label-caps uppercase text-secondary hover:underline">Manage Garage &amp; Archive →</a>
-        </div>
-        <div id="live-components-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter-desktop">
-          <div class="col-span-full p-8 text-center bg-surface-container-low rounded-xl font-telemetry-data text-on-surface-variant">
-            Menghubungkan ke Supabase... Pastikan <code>SUPABASE_URL</code> &amp; <code>SUPABASE_ANON_KEY</code> sudah diatur.
-          </div>
-        </div>
-      </section>
     </div>
   </main>
   <footer class="w-full bg-surface-container-lowest py-6 px-margin-desktop flex flex-col md:flex-row items-center justify-between gap-4 font-telemetry-data text-body-sm text-on-surface-variant">
