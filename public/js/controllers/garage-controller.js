@@ -1,8 +1,80 @@
 // frontend/js/controllers/garage-controller.js
+import { getSupabase } from '../core/supabase-client.js';
 import { TelemetryService, formatIDR, formatKm } from '../services/telemetry-service.js';
 
-window.addEventListener('telemetry:updated', (e) => {
-  const { bikes, archivedComps } = e.detail.AppState;
+let cachedComponentRules = [];
+
+async function loadComponentRules(stateRules) {
+  if (Array.isArray(stateRules) && stateRules.length > 0) {
+    cachedComponentRules = stateRules;
+    window.GearTrackRules = cachedComponentRules;
+    return cachedComponentRules;
+  }
+
+  try {
+    const { supabase } = await getSupabase();
+    const { data, error } = await supabase
+      .from('component_rules')
+      .select('*')
+      .order('category_name', { ascending: true });
+
+    if (!error && Array.isArray(data)) {
+      cachedComponentRules = data;
+      window.GearTrackRules = cachedComponentRules;
+    }
+  } catch (err) {
+    console.warn('Gagal memuat component_rules:', err.message);
+  }
+
+  return cachedComponentRules;
+}
+
+function renderComponentRules(rules) {
+  const rulesGrid = document.getElementById('live-rules-grid');
+  if (!rulesGrid) return;
+
+  if (!rules.length) {
+    rulesGrid.innerHTML = `
+      <div class="col-span-full p-6 bg-surface-container-low rounded-xl text-on-surface-variant font-telemetry-data">
+        Belum ada aturan komponen tersimpan di database.
+      </div>
+    `;
+    return;
+  }
+
+  rulesGrid.innerHTML = rules.map(r => `
+    <div class="bg-surface-container-low border border-outline-variant/20 p-5 rounded-xl flex flex-col justify-between gap-3">
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="font-headline-sm text-primary font-bold">${r.category_name}</h3>
+          <span class="px-2 py-0.5 rounded bg-secondary/15 text-secondary border border-secondary/30 font-label-caps text-label-caps uppercase whitespace-nowrap">
+            ${r.badge_label}
+          </span>
+        </div>
+        <p class="text-body-sm text-on-surface-variant leading-relaxed">${r.description || '-'}</p>
+      </div>
+
+      <div class="space-y-2 pt-2 border-t border-outline-variant/15 font-telemetry-data text-body-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-on-surface-variant">Max Lifespan</span>
+          <span class="text-primary font-bold">${Number(r.default_max_km).toLocaleString()} km / ${r.default_max_months} bln</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-on-surface-variant">Alert Thresholds</span>
+          <span>
+            <span class="text-secondary font-semibold">Warn ${r.warn_threshold_pct}%</span>
+            <span class="text-outline mx-1">•</span>
+            <span class="text-error font-semibold">Crit ${r.crit_threshold_pct}%</span>
+          </span>
+        </div>
+        ${r.calibration_note ? `<div class="text-[11px] text-tertiary-fixed pt-1">${r.calibration_note}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+window.addEventListener('telemetry:updated', async (e) => {
+  const { bikes, archivedComps, componentRules } = e.detail.AppState;
   const bikesGrid = document.getElementById('live-bikes-grid');
   if (!bikesGrid) return;
 
@@ -58,6 +130,9 @@ window.addEventListener('telemetry:updated', (e) => {
       }
     };
   });
+
+  const rules = await loadComponentRules(componentRules);
+  renderComponentRules(rules);
 
   const archEl = document.getElementById('live-archived-list');
   if (!archEl) return;
