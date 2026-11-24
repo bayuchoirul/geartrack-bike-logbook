@@ -50,7 +50,7 @@ async function loadComponentRules(stateRules) {
   return cachedComponentRules;
 }
 
-function renderComponentRules(rules) {
+function renderComponentRules(rules, activeBike) {
   const rulesGrid = document.getElementById('live-rules-grid');
   if (!rulesGrid) return;
 
@@ -63,39 +63,106 @@ function renderComponentRules(rules) {
     return;
   }
 
-  rulesGrid.innerHTML = rules.map(r => `
-    <div class="bg-surface-container-low border border-outline-variant/20 p-5 rounded-xl flex flex-col justify-between gap-3">
-      <div class="space-y-1.5">
-        <div class="flex items-center justify-between gap-2">
-          <h3 class="font-headline-sm text-primary font-bold">${r.category_name}</h3>
-          <span class="px-2 py-0.5 rounded bg-secondary/15 text-secondary border border-secondary/30 font-label-caps text-label-caps uppercase whitespace-nowrap">
-            ${r.badge_label}
-          </span>
-        </div>
-        <p class="text-body-sm text-on-surface-variant leading-relaxed">${r.description || '-'}</p>
-      </div>
+  const hasBike = Boolean(activeBike);
+  const bikeOdo = Number(activeBike?.odometer_km) || 0;
 
-      <div class="space-y-2 pt-2 border-t border-outline-variant/15 font-telemetry-data text-body-sm">
+  rulesGrid.innerHTML = rules.map(r => {
+    const maxKm = Number(r.default_max_km) || 1;
+    const warnPct = Number(r.warn_threshold_pct) || 75;
+    const critPct = Number(r.crit_threshold_pct) || 90;
+
+    // Hitung rasio odometer sepeda aktif terhadap batas umur pakai komponen
+    const rawRatioPct = hasBike ? Math.round((bikeOdo / maxKm) * 100) : 0;
+    const barWidthPct = Math.min(rawRatioPct, 100);
+    const remainingKm = maxKm - bikeOdo;
+
+    let statusLabel = 'OPTIMAL';
+    let statusBadgeClass = 'bg-tertiary-container/20 text-tertiary-fixed border-tertiary-container/40';
+    let pctColorClass = 'text-tertiary-fixed';
+    let barColorClass = 'bg-tertiary-container';
+    let cardBorderClass = 'border-outline-variant/20';
+
+    if (hasBike) {
+      if (rawRatioPct >= 100) {
+        statusLabel = 'OVERDUE';
+        statusBadgeClass = 'bg-error/20 text-error border-error/40';
+        pctColorClass = 'text-error';
+        barColorClass = 'bg-error';
+        cardBorderClass = 'border-error/40';
+      } else if (rawRatioPct >= critPct) {
+        statusLabel = 'CRITICAL';
+        statusBadgeClass = 'bg-error/20 text-error border-error/40';
+        pctColorClass = 'text-error';
+        barColorClass = 'bg-error';
+        cardBorderClass = 'border-error/40';
+      } else if (rawRatioPct >= warnPct) {
+        statusLabel = 'WARNING';
+        statusBadgeClass = 'bg-secondary/20 text-secondary border-secondary/40';
+        pctColorClass = 'text-secondary';
+        barColorClass = 'bg-secondary';
+        cardBorderClass = 'border-secondary/40';
+      }
+    }
+
+    const comparisonBlockHtml = hasBike ? `
+      <div class="mt-2 pt-2.5 border-t border-outline-variant/20 space-y-1.5">
         <div class="flex items-center justify-between">
-          <span class="text-on-surface-variant">Max Lifespan</span>
-          <span class="text-primary font-bold">${Number(r.default_max_km).toLocaleString()} km / ${r.default_max_months} bln</span>
-        </div>
-        <div class="flex items-center justify-between">
-          <span class="text-on-surface-variant">Alert Thresholds</span>
-          <span>
-            <span class="text-secondary font-semibold">Warn ${r.warn_threshold_pct}%</span>
-            <span class="text-outline mx-1">•</span>
-            <span class="text-error font-semibold">Crit ${r.crit_threshold_pct}%</span>
+          <span class="text-on-surface-variant text-[11px] uppercase font-label-caps">
+            vs ${activeBike.name} ODO
+          </span>
+          <span class="px-2 py-0.5 rounded border font-label-caps text-[10px] font-bold uppercase ${statusBadgeClass}">
+            ${statusLabel} • ${rawRatioPct}%
           </span>
         </div>
-        ${r.calibration_note ? `<div class="text-[11px] text-tertiary-fixed pt-1">${r.calibration_note}</div>` : ''}
+        <div class="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden">
+          <div class="h-full ${barColorClass} rounded-full transition-all duration-500" style="width: ${barWidthPct}%;"></div>
+        </div>
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="text-on-surface-variant">${formatKm(bikeOdo)} / ${maxKm.toLocaleString()} km</span>
+          <span class="${pctColorClass} font-semibold">
+            ${remainingKm >= 0
+              ? `Sisa ${formatKm(remainingKm)} km`
+              : `Lewat +${formatKm(Math.abs(remainingKm))} km`}
+          </span>
+        </div>
       </div>
-    </div>
-  `).join('');
+    ` : '';
+
+    return `
+      <div class="bg-surface-container-low border ${cardBorderClass} p-5 rounded-xl flex flex-col justify-between gap-3">
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="font-headline-sm text-primary font-bold">${r.category_name}</h3>
+            <span class="px-2 py-0.5 rounded bg-secondary/15 text-secondary border border-secondary/30 font-label-caps text-label-caps uppercase whitespace-nowrap">
+              ${r.badge_label}
+            </span>
+          </div>
+          <p class="text-body-sm text-on-surface-variant leading-relaxed">${r.description || '-'}</p>
+        </div>
+
+        <div class="space-y-2 pt-2 border-t border-outline-variant/15 font-telemetry-data text-body-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-on-surface-variant">Max Lifespan</span>
+            <span class="text-primary font-bold">${maxKm.toLocaleString()} km / ${r.default_max_months} bln</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-on-surface-variant">Alert Thresholds</span>
+            <span>
+              <span class="text-secondary font-semibold">Warn ${warnPct}%</span>
+              <span class="text-outline mx-1">•</span>
+              <span class="text-error font-semibold">Crit ${critPct}%</span>
+            </span>
+          </div>
+          ${comparisonBlockHtml}
+          ${r.calibration_note ? `<div class="text-[11px] text-tertiary-fixed pt-1">${r.calibration_note}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 window.addEventListener('telemetry:updated', async (e) => {
-  const { bikes, archivedComps, rules: stateRules } = e.detail.AppState;
+  const { bikes, selectedBike, archivedComps, rules: stateRules } = e.detail.AppState;
   const bikesGrid = document.getElementById('live-bikes-grid');
   if (!bikesGrid) return;
 
@@ -151,8 +218,9 @@ window.addEventListener('telemetry:updated', async (e) => {
     };
   });
 
+  const activeBike = selectedBike || bikes.find(b => b.is_default) || bikes[0] || null;
   const rules = await loadComponentRules(stateRules);
-  renderComponentRules(rules);
+  renderComponentRules(rules, activeBike);
 
   const archEl = document.getElementById('live-archived-list');
   if (!archEl) return;
