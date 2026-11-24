@@ -3,75 +3,18 @@
 <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>Sign In &amp; Register • Bike Logbook Telemetry v3.0</title>
+  <title>Sign In & Register • Bike Logbook Telemetry v3.0</title>
   <link href="https://fonts.googleapis.com" rel="preconnect"/>
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link href="/css/telemetry.css" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            "surface-tint": "#abd600",
-            "on-secondary": "#003640",
-            "secondary": "#4cd7f6",
-            "error-container": "#93000a",
-            "on-surface": "#dce1fb",
-            "on-background": "#dce1fb",
-            "surface-container-highest": "#2e3447",
-            "on-primary": "#283500",
-            "error": "#ffb4ab",
-            "on-surface-variant": "#c4c9ac",
-            "surface-container-lowest": "#070d1f",
-            "primary": "#ffffff",
-            "on-error": "#690005",
-            "primary-container": "#c3f400",
-            "surface-container": "#191f31",
-            "tertiary-container": "#6ffbbe",
-            "surface-container-high": "#23293c",
-            "surface-container-low": "#151b2d",
-            "background": "#0c1324",
-            "tertiary-fixed": "#6ffbbe",
-            "outline-variant": "#444933",
-            "primary-fixed": "#c3f400",
-            "secondary-container": "#03b5d3",
-            "tertiary-fixed-dim": "#4edea3",
-            "outline": "#8e9379",
-            "surface": "#0c1324"
-          },
-          fontFamily: {
-            "headline-lg": ["Space Grotesk"],
-            "headline-md": ["Space Grotesk"],
-            "headline-sm": ["Space Grotesk"],
-            "body-md": ["Inter"],
-            "body-sm": ["Inter"],
-            "telemetry-data": ["JetBrains Mono"],
-            "telemetry-metric-md": ["JetBrains Mono"],
-            "telemetry-metric-lg": ["JetBrains Mono"],
-            "label-caps": ["JetBrains Mono"]
-          },
-          fontSize: {
-            "headline-lg": ["32px", { lineHeight: "38px", fontWeight: "600" }],
-            "headline-md": ["22px", { lineHeight: "28px", fontWeight: "600" }],
-            "headline-sm": ["18px", { lineHeight: "24px", fontWeight: "600" }],
-            "body-md": ["14px", { lineHeight: "20px" }],
-            "body-sm": ["12px", { lineHeight: "16px" }],
-            "telemetry-data": ["13px", { lineHeight: "18px" }],
-            "telemetry-metric-md": ["20px", { lineHeight: "26px", fontWeight: "600" }],
-            "telemetry-metric-lg": ["30px", { lineHeight: "34px", fontWeight: "700" }],
-            "label-caps": ["11px", { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "600" }]
-          }
-        }
-      }
-    };
-  </script>
+  <script src="/js/config/tailwind.config.js"></script>
 </head>
 <body class="bg-surface font-body-md text-on-surface antialiased min-h-screen flex flex-col justify-between selection:bg-primary-container selection:text-on-primary">
   <!-- Minimalist Top Telemetry Bar -->
-  <header class="w-full bg-surface-container-lowest/90 backdrop-blur-xl border-b border-outline-variant/20">
+  <header class="telemetry-header w-full bg-surface-container-lowest/90 border-b border-outline-variant/20">
     <div class="max-w-[1280px] mx-auto h-16 px-6 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 rounded-lg bg-primary-container/15 border border-primary-container/40 flex items-center justify-center text-primary-container">
@@ -90,7 +33,6 @@
   <!-- Main Two-Column Auth Workspace -->
   <main class="flex-1 flex items-center justify-center px-4 py-10">
     <div class="w-full max-w-[1080px] grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-      
       <!-- Left Column: Telemetry Brand & Hardware Preview (Desktop) -->
       <section class="hidden lg:flex lg:col-span-6 bg-surface-container-low border border-outline-variant/25 rounded-2xl p-8 flex-col justify-between relative overflow-hidden">
         <div class="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-primary-container/5 blur-3xl pointer-events-none"></div>
@@ -129,7 +71,7 @@
                 <span class="text-error font-bold">92.0% • Replace</span>
               </div>
               <div class="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden">
-                <div class="h-full bg-error rounded-full" style="width: 92%"></div>
+                <div class="wear-progress-bar h-full bg-error rounded-full" style="width: 92%"></div>
               </div>
             </div>
 
@@ -139,7 +81,7 @@
                 <span class="text-secondary font-bold">74.0% • Monitor</span>
               </div>
               <div class="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden">
-                <div class="h-full bg-secondary rounded-full" style="width: 74%"></div>
+                <div class="wear-progress-bar h-full bg-secondary rounded-full" style="width: 74%"></div>
               </div>
             </div>
 
@@ -149,7 +91,7 @@
                 <span class="text-tertiary-fixed font-bold">48.0% • Optimal</span>
               </div>
               <div class="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden">
-                <div class="h-full bg-tertiary-container rounded-full" style="width: 48%"></div>
+                <div class="wear-progress-bar h-full bg-tertiary-container rounded-full" style="width: 48%"></div>
               </div>
             </div>
           </div>
@@ -164,7 +106,6 @@
       <!-- Right Column: Interactive Sign In / Sign Up Card -->
       <section class="lg:col-span-6 bg-surface-container-low border border-outline-variant/25 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col justify-center">
         <div class="max-w-md w-full mx-auto space-y-6">
-          
           <!-- Header & Mode Switcher -->
           <div class="space-y-4">
             <div>
@@ -189,7 +130,7 @@
             <span id="auth-alert-text" class="leading-snug"></span>
           </div>
 
-          <!-- ==================== 1. SIGN IN FORM ==================== -->
+          <!-- 1. SIGN IN FORM -->
           <form id="form-signin" class="space-y-4">
             <div>
               <label for="signin-email" class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1.5">Email Address</label>
@@ -225,7 +166,7 @@
             </button>
           </form>
 
-          <!-- ==================== 2. SIGN UP FORM ==================== -->
+          <!-- 2. SIGN UP FORM -->
           <form id="form-signup" class="hidden space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -263,7 +204,6 @@
                   <span class="material-symbols-outlined text-[18px]">visibility</span>
                 </button>
               </div>
-              <!-- 4-Segment Password Strength Meter -->
               <div class="grid grid-cols-4 gap-1.5 mt-2">
                 <div id="pw-bar-1" class="h-1.5 flex-1 rounded-full bg-surface-container-highest transition-all"></div>
                 <div id="pw-bar-2" class="h-1.5 flex-1 rounded-full bg-surface-container-highest transition-all"></div>
@@ -292,7 +232,7 @@
             </button>
           </form>
 
-          <!-- ==================== 3. FORGOT PASSWORD FORM ==================== -->
+          <!-- 3. FORGOT PASSWORD FORM -->
           <form id="form-forgot" class="hidden space-y-4">
             <div class="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-body-sm text-on-surface-variant">
               Masukkan alamat email terdaftar Anda. Kami akan mengirimkan tautan pemulihan password melalui Supabase Auth.
@@ -312,7 +252,7 @@
             </div>
           </form>
 
-          <!-- ==================== 4. EMAIL VERIFICATION NOTICE ==================== -->
+          <!-- 4. EMAIL VERIFICATION NOTICE -->
           <div id="verify-email-panel" class="hidden p-5 rounded-xl bg-surface-container-lowest border border-tertiary-container/40 space-y-4 text-center">
             <div class="w-12 h-12 rounded-full bg-tertiary-container/15 text-tertiary-fixed flex items-center justify-center mx-auto">
               <span class="material-symbols-outlined text-[26px]">mark_email_read</span>
@@ -332,7 +272,6 @@
               </button>
             </div>
           </div>
-
         </div>
       </section>
     </div>
