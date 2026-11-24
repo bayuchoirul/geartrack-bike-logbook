@@ -80,9 +80,8 @@ window.addEventListener('telemetry:updated', async (e) => {
 
   if (!bikes.length) {
     bikesGrid.innerHTML = `
-      <div class="col-span-full bg-surface-container-low p-8 rounded-xl text-center space-y-3">
+      <div class="col-span-full bg-surface-container-low p-8 rounded-xl text-center">
         <p class="font-telemetry-data text-on-surface-variant">Belum ada sepeda terdaftar di garasi.</p>
-        <button onclick="window.GearTrackUI.openAddBikeModal()" class="px-4 py-2 rounded-xl bg-primary-container text-on-primary font-label-caps uppercase font-bold" type="button">+ Register Bike</button>
       </div>
     `;
   } else {
