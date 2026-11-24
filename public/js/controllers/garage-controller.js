@@ -4,6 +4,34 @@ import { TelemetryService, formatIDR, formatKm } from '../services/telemetry-ser
 
 let cachedComponentRules = [];
 
+function splitWheelAndTireSpec(bike = {}) {
+  if (bike.wheel_spec || bike.tire_spec) {
+    return {
+      wheelSpec: String(bike.wheel_spec || '').trim(),
+      tireSpec: String(bike.tire_spec || '').trim()
+    };
+  }
+
+  const raw = String(bike.wheel_tire_spec || '').trim();
+  if (!raw) {
+    return { wheelSpec: '', tireSpec: '' };
+  }
+
+  // Pisahkan pola ukuran ban umum seperti "700x32", "700x28c", "27.5x2.1", "650bx47"
+  const tireMatch = raw.match(/\b(\d{2,3}(?:\.\d+)?[x×]\d{2,3}(?:\.\d+)?[a-zA-Z]*)\b/i);
+  if (tireMatch) {
+    const tireSpec = tireMatch[1].replace('×', 'x');
+    const wheelSpec = raw
+      .replace(tireMatch[0], '')
+      .replace(/[\s•/|,-]+$/g, '')
+      .replace(/^[\s•/|,-]+/g, '')
+      .trim();
+    return { wheelSpec, tireSpec };
+  }
+
+  return { wheelSpec: raw, tireSpec: '' };
+}
+
 // Pasang event listener untuk tombol + Register Bike dan + Register Part
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-action="open-add-bike"]').forEach(btn => {
@@ -179,7 +207,16 @@ window.addEventListener('telemetry:updated', async (e) => {
       </div>
     `;
   } else {
-    bikesGrid.innerHTML = bikes.map(b => `
+    bikesGrid.innerHTML = bikes.map(b => {
+      const { wheelSpec, tireSpec } = splitWheelAndTireSpec(b);
+      const specSummary = [
+        b.groupset_spec || '',
+        b.drivetrain_ratio || '',
+        wheelSpec ? `Wheel: ${wheelSpec}` : '',
+        tireSpec ? `Tire: ${tireSpec}` : ''
+      ].filter(Boolean).join(' • ');
+
+      return `
       <div class="bg-surface-container-low p-6 rounded-xl space-y-3 shadow-md">
         <div class="flex justify-between items-start gap-2">
           <div>
@@ -191,7 +228,7 @@ window.addEventListener('telemetry:updated', async (e) => {
           </span>
         </div>
         <div class="font-telemetry-data text-body-sm text-on-surface-variant">
-          ${b.groupset_spec || ''} • ${b.drivetrain_ratio || ''} • ${b.wheel_tire_spec || ''}
+          ${specSummary}
         </div>
         <div class="flex items-center justify-between gap-2 pt-2">
           <div class="font-telemetry-metric-md text-primary-container font-bold">${formatKm(b.odometer_km)} km</div>
@@ -208,7 +245,8 @@ window.addEventListener('telemetry:updated', async (e) => {
           </div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   const rules = await loadComponentRules(stateRules);
@@ -245,7 +283,12 @@ window.addEventListener('telemetry:updated', async (e) => {
     btn.onclick = () => {
       const targetBike = bikes.find(item => item.id === btn.dataset.editBike);
       if (targetBike) {
-        window.GearTrackUI.openEditBikeModal(targetBike);
+        const { wheelSpec, tireSpec } = splitWheelAndTireSpec(targetBike);
+        window.GearTrackUI.openEditBikeModal({
+          ...targetBike,
+          wheel_spec: wheelSpec,
+          tire_spec: tireSpec
+        });
       }
     };
   });
