@@ -191,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ride_type: fd.get('ride_type'),
       ride_date: new Date(fd.get('ride_date')).toISOString(),
       elevation_gain_m: Number(fd.get('elevation_gain_m')) || 0,
-      source: importedFileMeta?.sourceFormat || 'manual',
       notes: mergedNotes
     };
 
