@@ -572,14 +572,60 @@ export function openSheetsBackupModal() {
   });
 }
 
-export function openAddComponentModal() {
+export async function openAddComponentModal() {
   const bikes = AppState.bikes || [];
   const defaultBike = AppState.selectedBike || bikes.find(b => b.is_default) || bikes[0];
   if (!defaultBike) return;
 
+  // Ambil daftar rules dari AppState, cache window, atau langsung dari Supabase component_rules
+  let rules = Array.isArray(AppState.rules) && AppState.rules.length > 0
+    ? AppState.rules
+    : (Array.isArray(window.GearTrackRules) && window.GearTrackRules.length > 0 ? window.GearTrackRules : []);
+
+  if (!rules.length) {
+    try {
+      const { supabase } = await getSupabase();
+      const { data, error } = await supabase
+        .from('component_rules')
+        .select('*')
+        .order('category_name', { ascending: true });
+      if (!error && Array.isArray(data)) {
+        rules = data;
+        AppState.rules = data;
+      }
+    } catch (err) {
+      console.warn('Gagal memuat component_rules untuk dropdown:', err.message);
+    }
+  }
+
+  // Fallback jika tabel component_rules masih kosong
+  if (!rules.length) {
+    rules = [
+      { category_name: 'Bicycle Chain', default_max_km: 3000, default_max_months: 6, calibration_note: 'Standar chain stretch 0.5% - 0.75%' },
+      { category_name: 'Tires (Front/Rear)', default_max_km: 3500, default_max_months: 12, calibration_note: 'Standar ketebalan tapak ban luar' }
+    ];
+  }
+
+  const initialRule = rules[0];
+
+  const getIconForCategory = (catName = '') => {
+    const lower = catName.toLowerCase();
+    if (lower.includes('chain') || lower.includes('cassette') || lower.includes('drivetrain')) return 'link';
+    if (lower.includes('tire') || lower.includes('wheelset')) return 'tire_repair';
+    if (lower.includes('brake')) return 'album';
+    if (lower.includes('bearing') || lower.includes('bracket')) return 'trip_origin';
+    return 'settings';
+  };
+
   const bikeOptionsHtml = bikes.map(b => `
     <option value="${b.id}" ${b.id === defaultBike.id ? 'selected' : ''}>
       ${b.name} (${formatKm(b.odometer_km)} km)${b.is_default ? ' • Active' : ''}
+    </option>
+  `).join('');
+
+  const categoryOptionsHtml = rules.map((r, idx) => `
+    <option value="${r.category_name}" ${idx === 0 ? 'selected' : ''}>
+      ${r.category_name}${r.badge_label ? ` (${r.badge_label})` : ''}
     </option>
   `).join('');
 
@@ -600,14 +646,9 @@ export function openAddComponentModal() {
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Category</label>
-            <select name="category" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded">
-              <option value="Drivetrain">Drivetrain</option>
-              <option value="Wheelset (Rear)">Wheelset (Rear)</option>
-              <option value="Wheelset (Front)">Wheelset (Front)</option>
-              <option value="Brakes (F/R)">Brakes (F/R)</option>
-              <option value="Chassis Bearing">Chassis Bearing</option>
-              <option value="Cockpit">Cockpit</option>
+            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Category (from Rules)</label>
+            <select name="category" id="comp-category-select" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded">
+              ${categoryOptionsHtml}
             </select>
           </div>
           <div>
@@ -618,17 +659,20 @@ export function openAddComponentModal() {
         <div class="grid grid-cols-3 gap-3">
           <div>
             <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Lifespan (KM)</label>
-            <input type="number" name="max_lifespan_km" required value="3000" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
+            <input type="number" name="max_lifespan_km" id="comp-max-km" required value="${Number(initialRule.default_max_km) || 3000}" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
           </div>
           <div>
             <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Max Months</label>
-            <input type="number" name="max_lifespan_months" required value="12" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
+            <input type="number" name="max_lifespan_months" id="comp-max-months" required value="${Number(initialRule.default_max_months) || 12}" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
           </div>
           <div>
             <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Cost (IDR)</label>
             <input type="number" name="purchase_cost_idr" value="0" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
           </div>
         </div>
+        <p id="comp-lifespan-hint" class="font-telemetry-data text-[11px] text-tertiary-fixed -mt-2">
+          ${initialRule.calibration_note || initialRule.description || 'Standar kalibrasi dari Supabase component_rules'}
+        </p>
         <div>
           <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Initial Logged KM (0 if brand new)</label>
           <input type="number" step="0.1" name="logged_km" value="0" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded"/>
@@ -642,11 +686,26 @@ export function openAddComponentModal() {
     onMount: () => {
       const bikeSelect = document.getElementById('comp-target-bike');
       const eyebrowEl = document.getElementById('modal-eyebrow');
+      const categorySelect = document.getElementById('comp-category-select');
+      const maxKmInput = document.getElementById('comp-max-km');
+      const maxMonthsInput = document.getElementById('comp-max-months');
+      const hintEl = document.getElementById('comp-lifespan-hint');
 
       bikeSelect?.addEventListener('change', () => {
         const chosenBike = bikes.find(b => b.id === bikeSelect.value);
         if (chosenBike && eyebrowEl) {
           eyebrowEl.textContent = `HARDWARE REGISTRY • ${chosenBike.name.toUpperCase()}`;
+        }
+      });
+
+      // Sinkronkan Lifespan (KM), Max Months, & catatan dari baris component_rules yang dipilih
+      categorySelect?.addEventListener('change', () => {
+        const selectedRule = rules.find(r => r.category_name === categorySelect.value);
+        if (!selectedRule) return;
+        if (maxKmInput) maxKmInput.value = Number(selectedRule.default_max_km) || 3000;
+        if (maxMonthsInput) maxMonthsInput.value = Number(selectedRule.default_max_months) || 12;
+        if (hintEl) {
+          hintEl.textContent = selectedRule.calibration_note || selectedRule.description || 'Standar kalibrasi dari Supabase component_rules';
         }
       });
 
@@ -656,22 +715,14 @@ export function openAddComponentModal() {
         const fd = new FormData(e.target);
         const targetBikeId = fd.get('bike_id');
         const targetBike = bikes.find(b => b.id === targetBikeId) || defaultBike;
+        const cat = String(fd.get('category') || '');
 
-        const iconMap = {
-          'Drivetrain': 'link',
-          'Wheelset (Rear)': 'tire_repair',
-          'Wheelset (Front)': 'tire_repair',
-          'Brakes (F/R)': 'album',
-          'Chassis Bearing': 'trip_origin',
-          'Cockpit': 'tune'
-        };
-        const cat = fd.get('category');
         try {
           await TelemetryService.addComponent({
             bike_id: targetBike.id,
             name: fd.get('name'),
             category: cat,
-            icon_name: iconMap[cat] || 'settings',
+            icon_name: getIconForCategory(cat),
             installed_date: fd.get('installed_date'),
             installed_at_bike_km: targetBike.odometer_km,
             logged_km: Number(fd.get('logged_km')) || 0,
