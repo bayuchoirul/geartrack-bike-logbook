@@ -53,37 +53,43 @@ export const AuthService = {
 
   async signUp({ email, password, fullName, handle }) {
     const { supabase } = await getSupabase();
-    const cleanHandle = handle
+    const cleanEmail = email.trim();
+    const resolvedName = (fullName || cleanEmail.split('@')[0]).trim();
+    const cleanHandle = handle && handle.trim()
       ? (handle.trim().startsWith('@') ? handle.trim() : `@${handle.trim()}`)
-      : `@${email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_')}`;
+      : `@${cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_')}`;
 
     const redirectUrl = `${window.location.origin}/login?verified=1`;
     const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
+      email: cleanEmail,
       password,
       options: {
         emailRedirectTo: redirectUrl,
         data: {
-          full_name: (fullName || '').trim(),
+          full_name: resolvedName,
           rider_handle: cleanHandle
         }
       }
     });
     if (error) throw new Error(formatAuthError(error));
 
-    // Sinkronkan nama & handle ke tabel rider_settings jika sesi langsung aktif
-    if (data?.session && fullName) {
-      try {
-        await supabase
-          .from('rider_settings')
-          .update({
-            rider_name: fullName.trim(),
+    // Upsert nama & handle ke tabel rider_settings jika sesi langsung aktif
+    // (memastikan baris id=1 dibuat jika tabel masih kosong)
+    if (data?.session) {
+      const { error: settingsError } = await supabase
+        .from('rider_settings')
+        .upsert(
+          {
+            id: 1,
+            rider_name: resolvedName,
             handle: cleanHandle,
             updated_at: new Date().toISOString()
-          })
-          .eq('id', 1);
-      } catch (_) {
-        // Abaikan jika tabel rider_settings belum diinisialisasi
+          },
+          { onConflict: 'id' }
+        );
+
+      if (settingsError) {
+        console.warn('Gagal menyinkronkan rider_settings:', settingsError.message);
       }
     }
 
