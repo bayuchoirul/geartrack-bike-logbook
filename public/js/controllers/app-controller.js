@@ -882,41 +882,43 @@ export async function refreshAllData() {
 
     const stravaBtns = document.querySelectorAll('[data-action="sync-strava"]');
     stravaBtns.forEach(btn => {
-      if (AppState.settings?.strava_connected) {
-        btn.classList.add('border', 'border-tertiary-container/40');
-      }
-      btn.onclick = async () => {
-        if (btn.disabled) return;
-        btn.disabled = true;
-        const labelSpan = btn.querySelector('span:last-child');
-        const origLabel = labelSpan ? labelSpan.textContent : 'Sync Strava';
-        if (labelSpan) labelSpan.textContent = 'Syncing...';
+      btn.classList.add('hidden');
+      btn.setAttribute('aria-hidden', 'true');
+      // if (AppState.settings?.strava_connected) {
+      //   btn.classList.add('border', 'border-tertiary-container/40');
+      // }
+      // btn.onclick = async () => {
+      //   if (btn.disabled) return;
+      //   btn.disabled = true;
+      //   const labelSpan = btn.querySelector('span:last-child');
+      //   const origLabel = labelSpan ? labelSpan.textContent : 'Sync Strava';
+      //   if (labelSpan) labelSpan.textContent = 'Syncing...';
 
-        try {
-          showToast('Menghubungkan ke Strava API...');
-          const res = await TelemetryService.triggerStravaSync(AppState.selectedBike?.id || null);
+      //   try {
+      //     showToast('Menghubungkan ke Strava API...');
+      //     const res = await TelemetryService.triggerStravaSync(AppState.selectedBike?.id || null);
 
-          if (res?.needsAuth && res?.authUrl) {
-            showToast('Mengalihkan ke halaman login Strava OAuth...');
-            window.location.href = res.authUrl;
-            return;
-          }
+      //     if (res?.needsAuth && res?.authUrl) {
+      //       showToast('Mengalihkan ke halaman login Strava OAuth...');
+      //       window.location.href = res.authUrl;
+      //       return;
+      //     }
 
-          const count = res?.syncedCount || 0;
-          const km = res?.totalKmAdded || 0;
-          if (count > 0) {
-            showToast(`Strava Synced: +${count} aktivitas (+${formatKm(km)} km) masuk ke ${res.bikeName || 'sepeda'}!`);
-          } else {
-            showToast('Strava sudah sinkron — tidak ada aktivitas baru.');
-          }
-          await refreshAllData();
-        } catch (err) {
-          showToast(err.message || 'Gagal sinkronisasi Strava', 'error');
-        } finally {
-          btn.disabled = false;
-          if (labelSpan) labelSpan.textContent = origLabel;
-        }
-      };
+      //     const count = res?.syncedCount || 0;
+      //     const km = res?.totalKmAdded || 0;
+      //     if (count > 0) {
+      //       showToast(`Strava Synced: +${count} aktivitas (+${formatKm(km)} km) masuk ke ${res.bikeName || 'sepeda'}!`);
+      //     } else {
+      //       showToast('Strava sudah sinkron — tidak ada aktivitas baru.');
+      //     }
+      //     await refreshAllData();
+      //   } catch (err) {
+      //     showToast(err.message || 'Gagal sinkronisasi Strava', 'error');
+      //   } finally {
+      //     btn.disabled = false;
+      //     if (labelSpan) labelSpan.textContent = origLabel;
+      //   }
+      // };
     });
 
     const sheetsBtns = document.querySelectorAll('[data-action="backup-sheets"]');
