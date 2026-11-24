@@ -154,15 +154,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   btnRide?.addEventListener('click', () => {
-    rideForm.classList.remove('hidden');
-    maintForm.classList.add('hidden');
+    rideForm?.classList.remove('hidden');
+    maintForm?.classList.add('hidden');
     btnRide.className = 'px-4 py-2 rounded-lg bg-surface-container-high text-primary-container font-label-caps text-label-caps uppercase font-bold';
     btnService.className = 'px-4 py-2 rounded-lg text-on-surface-variant font-label-caps text-label-caps uppercase font-bold';
   });
 
   btnService?.addEventListener('click', () => {
-    rideForm.classList.add('hidden');
-    maintForm.classList.remove('hidden');
+    rideForm?.classList.add('hidden');
+    maintForm?.classList.remove('hidden');
     btnService.className = 'px-4 py-2 rounded-lg bg-surface-container-high text-primary-container font-label-caps text-label-caps uppercase font-bold';
     btnRide.className = 'px-4 py-2 rounded-lg text-on-surface-variant font-label-caps text-label-caps uppercase font-bold';
   });
@@ -172,23 +172,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const fd = new FormData(rideForm);
     const movingMinVal = Number(fd.get('moving_time_min')) || 0;
     const rawNotes = String(fd.get('notes') || '').trim();
-    const metaNote = importedFileMeta
-      ? `[${importedFileMeta.sourceFormat.toUpperCase()}: ${importedFileMeta.fileName}${movingMinVal > 0 ? `, ${movingMinVal} min` : ''}]`
-      : '';
+    const metaParts = [];
+
+    if (importedFileMeta) {
+      metaParts.push(`${importedFileMeta.sourceFormat.toUpperCase()}: ${importedFileMeta.fileName}`);
+    }
+    if (movingMinVal > 0) {
+      metaParts.push(`Moving Time: ${movingMinVal} min`);
+    }
+
+    const metaNote = metaParts.length ? `[${metaParts.join(' • ')}]` : '';
     const mergedNotes = [rawNotes, metaNote].filter(Boolean).join(' ');
 
+    const payload = {
+      bike_id: fd.get('bike_id'),
+      title: String(fd.get('title') || '').trim(),
+      distance_km: Number(fd.get('distance_km')),
+      ride_type: fd.get('ride_type'),
+      ride_date: new Date(fd.get('ride_date')).toISOString(),
+      elevation_gain_m: Number(fd.get('elevation_gain_m')) || 0,
+      source: importedFileMeta?.sourceFormat || 'manual',
+      notes: mergedNotes
+    };
+
     try {
-      await TelemetryService.logRide({
-        bike_id: fd.get('bike_id'),
-        title: fd.get('title'),
-        distance_km: Number(fd.get('distance_km')),
-        ride_type: fd.get('ride_type'),
-        ride_date: new Date(fd.get('ride_date')).toISOString(),
-        elevation_gain_m: Number(fd.get('elevation_gain_m')) || 0,
-        moving_time_minutes: movingMinVal,
-        source: importedFileMeta?.sourceFormat || 'manual',
-        notes: mergedNotes
-      });
+      await TelemetryService.logRide(payload);
       window.GearTrackUI.showToast('Ride berhasil dicatat & odometer diperbarui!');
       rideForm.reset();
       resetImportedFileState();
@@ -258,43 +266,3 @@ window.addEventListener('telemetry:updated', (e) => {
       .join('');
   }
 });
-
-rideForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fd = new FormData(rideForm);
-    const movingMinVal = Number(fd.get('moving_time_min')) || 0;
-    const rawNotes = String(fd.get('notes') || '').trim();
-    const metaParts = [];
-
-    if (importedFileMeta) {
-      metaParts.push(`${importedFileMeta.sourceFormat.toUpperCase()}: ${importedFileMeta.fileName}`);
-    }
-    if (movingMinVal > 0) {
-      metaParts.push(`Moving Time: ${movingMinVal} min`);
-    }
-
-    const metaNote = metaParts.length ? `[${metaParts.join(' • ')}]` : '';
-    const mergedNotes = [rawNotes, metaNote].filter(Boolean).join(' ');
-
-    const payload = {
-      bike_id: fd.get('bike_id'),
-      title: String(fd.get('title') || '').trim(),
-      distance_km: Number(fd.get('distance_km')),
-      ride_type: fd.get('ride_type'),
-      ride_date: new Date(fd.get('ride_date')).toISOString(),
-      elevation_gain_m: Number(fd.get('elevation_gain_m')) || 0,
-      source: importedFileMeta?.sourceFormat || 'manual',
-      notes: mergedNotes
-    };
-
-    try {
-      await TelemetryService.logRide(payload);
-      window.GearTrackUI.showToast('Ride berhasil dicatat & odometer diperbarui!');
-      rideForm.reset();
-      resetImportedFileState();
-      resetDateDefault();
-      await window.GearTrackUI.refreshAllData();
-    } catch (err) {
-      window.GearTrackUI.showToast(err.message, 'error');
-    }
-  });
