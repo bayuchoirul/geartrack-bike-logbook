@@ -9,17 +9,12 @@
     { "source": "/log-activity", "destination": "/frontend/pages/log-activity.html" },
     { "source": "/ledger", "destination": "/frontend/pages/ledger.html" },
     { "source": "/garage", "destination": "/frontend/pages/garage.html" },
+    { "source": "/css/(.*)", "destination": "/frontend/pages/css/$1" },
     { "source": "/js/(.*)", "destination": "/frontend/js/$1" }
   ],
   "headers": [
     {
-      "source": "/frontend/js/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-      ]
-    },
-    {
-      "source": "/js/(.*)",
+      "source": "/(frontend/)?js/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
