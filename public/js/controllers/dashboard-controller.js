@@ -29,9 +29,51 @@ window.addEventListener('telemetry:updated', (e) => {
   document.getElementById('kpi-rides-count').textContent = `${metrics.totalRidesCount} completed rides (+${formatKm(metrics.monthKm)} km this month)`;
   document.getElementById('kpi-ytd-spend').textContent = formatIDR(metrics.totalSpendIdr);
   document.getElementById('kpi-cost-per-100').textContent = `Cost per 100km: ${formatIDR(metrics.costPer100Km)}`;
-  document.getElementById('kpi-attention-count').textContent = `${metrics.attentionComps.length} Items`;
-  document.getElementById('kpi-attention-list').innerHTML = metrics.attentionComps.length
-    ? metrics.attentionComps.map(c => `<div>• ${c.name} (${c.effective_wear_pct}%)</div>`).join('')
+
+  // 1. Ambil item dari komponen aktif terpasang yang butuh perhatian
+  const attentionItems = (metrics.attentionComps || []).map(c => ({
+    name: c.name,
+    pct: Number(c.effective_wear_pct) || 0,
+    isOverdue: (Number(c.effective_wear_pct) || 0) >= 100
+  }));
+
+  // 2. Cek Component Calibration Rules yang sudah OVERDUE (>= 100% dari odometer sepeda)
+  const bikeOdo = Number(bike.odometer_km) || 0;
+  const rules = AppState?.rules || [];
+
+  rules.forEach(rule => {
+    const maxKm = Number(rule.default_max_km) || 0;
+    if (maxKm <= 0) return;
+
+    const ratioPct = Math.round((bikeOdo / maxKm) * 100);
+    if (ratioPct >= 100) {
+      // Hindari duplikasi jika nama komponen/kategori sudah ada di daftar komponen terpasang
+      const alreadyTracked = attentionItems.some(
+        item => item.name.toLowerCase().includes(rule.category_name.toLowerCase())
+      );
+      if (!alreadyTracked) {
+        attentionItems.push({
+          name: rule.category_name,
+          pct: ratioPct,
+          isOverdue: true
+        });
+      }
+    }
+  });
+
+  // Urutkan dari persentase wear tertinggi
+  attentionItems.sort((a, b) => b.pct - a.pct);
+
+  document.getElementById('kpi-attention-count').textContent = `${attentionItems.length} Items`;
+  document.getElementById('kpi-attention-list').innerHTML = attentionItems.length
+    ? attentionItems.map(item => `
+        <div class="flex items-center justify-between gap-2">
+          <span class="truncate">• ${item.name}</span>
+          <span class="${item.isOverdue ? 'text-error font-semibold' : 'text-secondary'} whitespace-nowrap">
+            ${item.pct}%${item.isOverdue ? ' (Overdue)' : ''}
+          </span>
+        </div>
+      `).join('')
     : '<span class="text-tertiary-fixed">Semua komponen dalam kondisi optimal (&lt;65%)</span>';
 
   const lastSyncEl = document.getElementById('sheets-last-sync-text');
