@@ -1,6 +1,6 @@
 -- ============================================================================
 -- GearTrack / Bike Logbook Telemetry — PostgreSQL & Supabase RLS Schema
--- Selaras 100% dengan public/js/services/telemetry-service.js
+-- Aman dijalankan pada database baru maupun database lama (auto-migrate kolom)
 -- ============================================================================
 
 create extension if not exists "pgcrypto";
@@ -8,13 +8,11 @@ create extension if not exists "pgcrypto";
 create or replace function public.handle_updated_at()
 returns trigger
 language plpgsql
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
+as $$ begin new.updated_at = now(); return new; end; $$;
 
+-- ----------------------------------------------------------------------------
+-- 1. Tabel: public.bikes
+-- ----------------------------------------------------------------------------
 create table if not exists public.bikes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -26,6 +24,14 @@ create table if not exists public.bikes (
   updated_at timestamptz not null default now()
 );
 
+-- Pastikan kolom baru ditambahkan jika tabel bikes sudah ada dari versi lama
+alter table public.bikes
+  add column if not exists brand_model text not null default '',
+  add column if not exists total_odometer_km numeric(10, 2) not null default 0,
+  add column if not exists is_archived boolean not null default false,
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
 create index if not exists idx_bikes_user_order
   on public.bikes (user_id, is_archived asc, created_at asc);
 
@@ -34,6 +40,9 @@ create trigger trg_bikes_updated_at
   before update on public.bikes
   for each row execute function public.handle_updated_at();
 
+-- ----------------------------------------------------------------------------
+-- 2. Tabel: public.components
+-- ----------------------------------------------------------------------------
 create table if not exists public.components (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -47,6 +56,15 @@ create table if not exists public.components (
   updated_at timestamptz not null default now()
 );
 
+-- Pastikan kolom baru ditambahkan jika tabel components sudah ada dari versi lama
+alter table public.components
+  add column if not exists category text not null default 'Service',
+  add column if not exists installed_odometer_km numeric(10, 2) not null default 0,
+  add column if not exists lifespan_km numeric(10, 2) not null default 3000,
+  add column if not exists is_archived boolean not null default false,
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
 create index if not exists idx_components_user_created
   on public.components (user_id, created_at desc);
 
@@ -58,6 +76,9 @@ create trigger trg_components_updated_at
   before update on public.components
   for each row execute function public.handle_updated_at();
 
+-- ----------------------------------------------------------------------------
+-- 3. Tabel: public.activities
+-- ----------------------------------------------------------------------------
 create table if not exists public.activities (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -72,12 +93,22 @@ create table if not exists public.activities (
   created_at timestamptz not null default now()
 );
 
+alter table public.activities
+  add column if not exists strava_activity_id bigint,
+  add column if not exists duration_minutes integer not null default 0,
+  add column if not exists elevation_gain_m integer not null default 0,
+  add column if not exists notes text not null default '',
+  add column if not exists created_at timestamptz not null default now();
+
 create index if not exists idx_activities_user_date
   on public.activities (user_id, date desc);
 
 create index if not exists idx_activities_bike_id
   on public.activities (bike_id);
 
+-- ----------------------------------------------------------------------------
+-- 4. Tabel: public.ledger_entries
+-- ----------------------------------------------------------------------------
 create table if not exists public.ledger_entries (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -91,6 +122,14 @@ create table if not exists public.ledger_entries (
   updated_at timestamptz not null default now()
 );
 
+alter table public.ledger_entries
+  add column if not exists category text not null default 'Service',
+  add column if not exists cost numeric(12, 2) not null default 0,
+  add column if not exists date date not null default current_date,
+  add column if not exists distance_km numeric(10, 2),
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
 create index if not exists idx_ledger_user_date
   on public.ledger_entries (user_id, date desc);
 
@@ -102,43 +141,8 @@ create trigger trg_ledger_entries_updated_at
   before update on public.ledger_entries
   for each row execute function public.handle_updated_at();
 
+-- ----------------------------------------------------------------------------
+-- 5. Row Level Security (RLS) & Policies
+-- ----------------------------------------------------------------------------
 alter table public.bikes enable row level security;
-alter table public.components enable row level security;
-alter table public.activities enable row level security;
-alter table public.ledger_entries enable row level security;
-
-drop policy if exists "bikes_select_own" on public.bikes;
-create policy "bikes_select_own" on public.bikes for select to authenticated using (auth.uid() = user_id);
-drop policy if exists "bikes_insert_own" on public.bikes;
-create policy "bikes_insert_own" on public.bikes for insert to authenticated with check (auth.uid() = user_id);
-drop policy if exists "bikes_update_own" on public.bikes;
-create policy "bikes_update_own" on public.bikes for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
-drop policy if exists "bikes_delete_own" on public.bikes;
-create policy "bikes_delete_own" on public.bikes for delete to authenticated using (auth.uid() = user_id);
-
-drop policy if exists "components_select_own" on public.components;
-create policy "components_select_own" on public.components for select to authenticated using (auth.uid() = user_id);
-drop policy if exists "components_insert_own" on public.components;
-create policy "components_insert_own" on public.components for insert to authenticated with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
-drop policy if exists "components_update_own" on public.components;
-create policy "components_update_own" on public.components for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
-drop policy if exists "components_delete_own" on public.components;
-create policy "components_delete_own" on public.components for delete to authenticated using (auth.uid() = user_id);
-
-drop policy if exists "activities_select_own" on public.activities;
-create policy "activities_select_own" on public.activities for select to authenticated using (auth.uid() = user_id);
-drop policy if exists "activities_insert_own" on public.activities;
-create policy "activities_insert_own" on public.activities for insert to authenticated with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
-drop policy if exists "activities_update_own" on public.activities;
-create policy "activities_update_own" on public.activities for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
-drop policy if exists "activities_delete_own" on public.activities;
-create policy "activities_delete_own" on public.activities for delete to authenticated using (auth.uid() = user_id);
-
-drop policy if exists "ledger_entries_select_own" on public.ledger_entries;
-create policy "ledger_entries_select_own" on public.ledger_entries for select to authenticated using (auth.uid() = user_id);
-drop policy if exists "ledger_entries_insert_own" on public.ledger_entries;
-create policy "ledger_entries_insert_own" on public.ledger_entries for insert to authenticated with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
-drop policy if exists "ledger_entries_update_own" on public.ledger_entries;
-create policy "ledger_entries_update_own" on public.ledger_entries for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
-drop policy if exists "ledger_entries_delete_own" on public.ledger_entries;
-create policy "ledger_entries_delete_own" on public.ledger_entries for delete to authenticated using (auth.uid() = user_id);
+alter table public.
