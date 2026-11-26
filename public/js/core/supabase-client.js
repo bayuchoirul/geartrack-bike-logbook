@@ -1,7 +1,8 @@
 // public/js/core/supabase-client.js
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { SUPABASE_CONFIG } from './supabase-config.js';
 
-const CONFIG_CACHE_KEY = 'geartrack_supabase_cfg_v1';
+const CONFIG_CACHE_KEY = 'geartrack_supabase_cfg_v2';
 
 /** @type {import('https://esm.sh/@supabase/supabase-js@2').SupabaseClient | null} */
 let clientInstance = null;
@@ -13,6 +14,8 @@ let initPromise = null;
  * @returns {Promise<{ supabaseUrl: string, supabaseAnonKey: string }>}
  */
 async function loadPublicConfig() {
+  sessionStorage.removeItem('geartrack_supabase_cfg_v1');
+
   const cached = sessionStorage.getItem(CONFIG_CACHE_KEY);
   if (cached) {
     try {
@@ -25,14 +28,9 @@ async function loadPublicConfig() {
     }
   }
 
-  const res = await fetch('/api/config');
-  if (!res.ok) {
-    throw new Error(`Gagal memuat konfigurasi Supabase (HTTP ${res.status}).`);
-  }
-
-  const data = await res.json();
-  const supabaseUrl = data.supabaseUrl || data.SUPABASE_URL;
-  const supabaseAnonKey = data.supabaseAnonKey || data.SUPABASE_ANON_KEY;
+  const runtimeOverride = /** @type {any} */ (window).__GEARTRACK_CONFIG__;
+  const supabaseUrl = (runtimeOverride?.supabaseUrl || SUPABASE_CONFIG.supabaseUrl || '').trim();
+  const supabaseAnonKey = (runtimeOverride?.supabaseAnonKey || SUPABASE_CONFIG.supabaseAnonKey || '').trim();
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('SUPABASE_URL atau SUPABASE_ANON_KEY belum dikonfigurasi di Vercel.');
