@@ -8,7 +8,12 @@ create extension if not exists "pgcrypto";
 create or replace function public.handle_updated_at()
 returns trigger
 language plpgsql
-as $$ begin new.updated_at = now(); return new; end; $$;
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
 
 -- ----------------------------------------------------------------------------
 -- 1. Tabel: public.bikes
@@ -145,4 +150,42 @@ create trigger trg_ledger_entries_updated_at
 -- 5. Row Level Security (RLS) & Policies
 -- ----------------------------------------------------------------------------
 alter table public.bikes enable row level security;
-alter table public.
+alter table public.components enable row level security;
+alter table public.activities enable row level security;
+alter table public.ledger_entries enable row level security;
+
+drop policy if exists "bikes_select_own" on public.bikes;
+create policy "bikes_select_own" on public.bikes for select to authenticated using (auth.uid() = user_id);
+drop policy if exists "bikes_insert_own" on public.bikes;
+create policy "bikes_insert_own" on public.bikes for insert to authenticated with check (auth.uid() = user_id);
+drop policy if exists "bikes_update_own" on public.bikes;
+create policy "bikes_update_own" on public.bikes for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "bikes_delete_own" on public.bikes;
+create policy "bikes_delete_own" on public.bikes for delete to authenticated using (auth.uid() = user_id);
+
+drop policy if exists "components_select_own" on public.components;
+create policy "components_select_own" on public.components for select to authenticated using (auth.uid() = user_id);
+drop policy if exists "components_insert_own" on public.components;
+create policy "components_insert_own" on public.components for insert to authenticated with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "components_update_own" on public.components;
+create policy "components_update_own" on public.components for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "components_delete_own" on public.components;
+create policy "components_delete_own" on public.components for delete to authenticated using (auth.uid() = user_id);
+
+drop policy if exists "activities_select_own" on public.activities;
+create policy "activities_select_own" on public.activities for select to authenticated using (auth.uid() = user_id);
+drop policy if exists "activities_insert_own" on public.activities;
+create policy "activities_insert_own" on public.activities for insert to authenticated with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "activities_update_own" on public.activities;
+create policy "activities_update_own" on public.activities for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "activities_delete_own" on public.activities;
+create policy "activities_delete_own" on public.activities for delete to authenticated using (auth.uid() = user_id);
+
+drop policy if exists "ledger_entries_select_own" on public.ledger_entries;
+create policy "ledger_entries_select_own" on public.ledger_entries for select to authenticated using (auth.uid() = user_id);
+drop policy if exists "ledger_entries_insert_own" on public.ledger_entries;
+create policy "ledger_entries_insert_own" on public.ledger_entries for insert to authenticated with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "ledger_entries_update_own" on public.ledger_entries;
+create policy "ledger_entries_update_own" on public.ledger_entries for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "ledger_entries_delete_own" on public.ledger_entries;
+create policy "ledger_entries_delete_own" on public.ledger_entries for delete to authenticated using (auth.uid() = user_id);
