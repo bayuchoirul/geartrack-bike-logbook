@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>GearTrack — Buku Biaya & Riwayat</title>
+  <link rel="stylesheet" href="/css/telemetry.css" />
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 pb-24 md:pb-12">
+  <div id="app-shell"></div>
+
+  <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
+    <section class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 data-i18n="ledger.title" class="text-xl sm:text-2xl font-bold tracking-tight text-white">
+          Buku Biaya & Riwayat
+        </h1>
+        <p data-i18n="ledger.subtitle" class="text-xs sm:text-sm text-slate-400 mt-1">
+          Catatan perawatan, suku cadang, dan rasio cost-per-km.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        id="btn-open-ledger-modal"
+        data-i18n="ledger.add_entry"
+        class="w-full sm:w-auto rounded-xl bg-pink-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-pink-500 transition">
+        + Catat Biaya
+      </button>
+    </section>
+
+    <section id="ledger-summary-cards" aria-label="Ringkasan Biaya"></section>
+
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <select
+        id="filter-ledger-bike"
+        aria-label="Filter sepeda"
+        class="rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:border-pink-500 focus:outline-none">
+      </select>
+
+      <select
+        id="filter-ledger-category"
+        aria-label="Filter kategori"
+        class="rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:border-pink-500 focus:outline-none">
+        <option value="" data-i18n="ledger.filter_all_categories">Semua Kategori</option>
+        <option value="Drivetrain">Drivetrain</option>
+        <option value="Tires">Tires</option>
+        <option value="Brakes">Brakes</option>
+        <option value="Bearings">Bearings</option>
+        <option value="Service">Service</option>
+        <option value="Accessories">Accessories</option>
+      </select>
+
+      <input
+        id="filter-ledger-search"
+        type="search"
+        data-i18n-placeholder="ledger.filter_search"
+        placeholder="Cari keterangan transaksi..."
+        class="rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+    </section>
+
+    <section id="ledger-records" aria-label="Daftar Transaksi"></section>
+  </main>
+
+  <div
+    id="modal-ledger-entry"
+    data-modal-backdrop
+    class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm items-end md:items-center justify-center p-0 md:p-4">
+    <div class="w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 data-i18n="ledger.modal_entry_title" class="text-base font-bold text-white">
+          Data Biaya Perawatan
+        </h3>
+        <button
+          type="button"
+          data-close-modal="modal-ledger-entry"
+          class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white">
+          ✕
+        </button>
+      </div>
+
+      <form id="form-ledger-entry" class="space-y-4">
+        <input type="hidden" name="id" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label for="entry-bike" data-i18n="common.select_bike" class="block text-xs font-medium text-slate-300">
+              Pilih Sepeda
+            </label>
+            <select
+              id="entry-bike"
+              name="bikeId"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none">
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="entry-date" data-i18n="common.date" class="block text-xs font-medium text-slate-300">
+              Tanggal
+            </label>
+            <input
+              id="entry-date"
+              name="date"
+              type="date"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="entry-title" data-i18n="ledger.field_title" class="block text-xs font-medium text-slate-300">
+            Keterangan Item / Servis
+          </label>
+          <input
+            id="entry-title"
+            name="title"
+            type="text"
+            required
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="space-y-1.5">
+            <label for="entry-category" data-i18n="common.category" class="block text-xs font-medium text-slate-300">
+              Kategori
+            </label>
+            <select
+              id="entry-category"
+              name="category"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none">
+              <option value="Drivetrain">Drivetrain</option>
+              <option value="Tires">Tires</option>
+              <option value="Brakes">Brakes</option>
+              <option value="Bearings">Bearings</option>
+              <option value="Service">Service</option>
+              <option value="Accessories">Accessories</option>
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="entry-cost" data-i18n="ledger.field_cost" class="block text-xs font-medium text-slate-300">
+              Biaya (IDR)
+            </label>
+            <input
+              id="entry-cost"
+              name="cost"
+              type="number"
+              step="1"
+              min="0"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="entry-distance" data-i18n="ledger.field_distance" class="block text-xs font-medium text-slate-300">
+              Odometer Saat Servis (Opsional)
+            </label>
+            <input
+              id="entry-distance"
+              name="distanceKm"
+              type="number"
+              step="0.1"
+              min="0"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 pt-2">
+          <button
+            type="button"
+            data-close-modal="modal-ledger-entry"
+            data-i18n="common.cancel"
+            class="rounded-xl border border-slate-700 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800">
+            Batal
+          </button>
+          <button
+            type="submit"
+            id="btn-save-ledger"
+            data-i18n="common.save"
+            class="rounded-xl bg-pink-600 py-2.5 text-sm font-semibold text-white hover:bg-pink-500">
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="/js/controllers/ledger-controller.js"></script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>GearTrack — Catat Aktivitas & Servis</title>
+  <link rel="stylesheet" href="/css/telemetry.css" />
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 pb-24 md:pb-12">
+  <div id="app-shell"></div>
+
+  <main class="max-w-2xl mx-auto px-4 pt-6 space-y-6">
+    <div>
+      <h1 data-i18n="log.title" class="text-xl sm:text-2xl font-bold tracking-tight text-white">
+        Catat Aktivitas & Servis
+      </h1>
+      <p data-i18n="log.subtitle" class="text-xs sm:text-sm text-slate-400 mt-1">
+        Tambahkan sesi bersepeda manual atau catatan perawatan baru.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-1.5 rounded-2xl border border-slate-800 bg-slate-900 p-1.5">
+      <button type="button" data-log-tab="ride" data-i18n="log.tab_ride"
+        class="rounded-xl py-2.5 text-xs sm:text-sm font-semibold bg-pink-600 text-white transition">
+        Aktivitas Bersepeda
+      </button>
+      <button type="button" data-log-tab="maintenance" data-i18n="log.tab_maintenance"
+        class="rounded-xl py-2.5 text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition">
+        Perawatan & Suku Cadang
+      </button>
+    </div>
+
+    <section id="panel-log-ride" class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 sm:p-6">
+      <form id="form-log-ride" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label for="ride-bike" data-i18n="common.select_bike" class="block text-xs font-medium text-slate-300">
+              Pilih Sepeda
+            </label>
+            <select
+              id="ride-bike"
+              name="bikeId"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none">
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="ride-date" data-i18n="common.date" class="block text-xs font-medium text-slate-300">
+              Tanggal
+            </label>
+            <input
+              id="ride-date"
+              name="date"
+              type="date"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="ride-title" data-i18n="log.ride_title" class="block text-xs font-medium text-slate-300">
+            Nama Rute / Aktivitas
+          </label>
+          <input
+            id="ride-title"
+            name="title"
+            type="text"
+            required
+            data-i18n-placeholder="log.ride_title_ph"
+            placeholder="Contoh: Morning Loop Puncak"
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="space-y-1.5">
+            <label for="ride-distance" data-i18n="log.distance_km" class="block text-xs font-medium text-slate-300">
+              Jarak Tempuh (km)
+            </label>
+            <input
+              id="ride-distance"
+              name="distanceKm"
+              type="number"
+              step="0.01"
+              min="0.1"
+              required
+              placeholder="45.5"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="ride-duration" data-i18n="log.duration_min" class="block text-xs font-medium text-slate-300">
+              Durasi (Menit)
+            </label>
+            <input
+              id="ride-duration"
+              name="durationMinutes"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="95"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="ride-elevation" data-i18n="log.elevation_m" class="block text-xs font-medium text-slate-300">
+              Elevasi (m)
+            </label>
+            <input
+              id="ride-elevation"
+              name="elevationGainM"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="420"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="ride-notes" data-i18n="common.notes" class="block text-xs font-medium text-slate-300">
+            Catatan (Opsional)
+          </label>
+          <textarea
+            id="ride-notes"
+            name="notes"
+            rows="2"
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none"></textarea>
+        </div>
+
+        <button
+          type="submit"
+          id="btn-submit-ride"
+          data-i18n="log.submit_ride"
+          class="w-full rounded-xl bg-pink-600 px-4 py-3 text-sm font-semibold text-white hover:bg-pink-500 transition">
+          Simpan Aktivitas
+        </button>
+      </form>
+    </section>
+
+    <section id="panel-log-maintenance" class="hidden rounded-2xl border border-slate-800 bg-slate-900/80 p-5 sm:p-6">
+      <form id="form-log-maintenance" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label for="maint-bike" data-i18n="common.select_bike" class="block text-xs font-medium text-slate-300">
+              Pilih Sepeda
+            </label>
+            <select
+              id="maint-bike"
+              name="bikeId"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none">
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="maint-date" data-i18n="common.date" class="block text-xs font-medium text-slate-300">
+              Tanggal
+            </label>
+            <input
+              id="maint-date"
+              name="date"
+              type="date"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="maint-title" data-i18n="log.maint_title" class="block text-xs font-medium text-slate-300">
+            Nama Item / Servis
+          </label>
+          <input
+            id="maint-title"
+            name="title"
+            type="text"
+            required
+            data-i18n-placeholder="log.maint_title_ph"
+            placeholder="Contoh: Ganti Rantai Shimano 105"
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="space-y-1.5">
+            <label for="maint-category" data-i18n="common.category" class="block text-xs font-medium text-slate-300">
+              Kategori
+            </label>
+            <select
+              id="maint-category"
+              name="category"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none">
+              <option value="Drivetrain">Drivetrain</option>
+              <option value="Tires">Tires</option>
+              <option value="Brakes">Brakes</option>
+              <option value="Bearings">Bearings</option>
+              <option value="Service">Service</option>
+              <option value="Accessories">Accessories</option>
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="maint-cost" data-i18n="log.cost_idr" class="block text-xs font-medium text-slate-300">
+              Biaya (IDR)
+            </label>
+            <input
+              id="maint-cost"
+              name="cost"
+              type="number"
+              step="1"
+              min="0"
+              required
+              placeholder="350000"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="maint-distance" data-i18n="log.odometer_at_service" class="block text-xs font-medium text-slate-300">
+              Odometer Saat Servis (km)
+            </label>
+            <input
+              id="maint-distance"
+              name="distanceKm"
+              type="number"
+              step="0.1"
+              min="0"
+              placeholder="7250"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          id="btn-submit-maint"
+          data-i18n="log.submit_maint"
+          class="w-full rounded-xl bg-pink-600 px-4 py-3 text-sm font-semibold text-white hover:bg-pink-500 transition">
+          Simpan Catatan Biaya
+        </button>
+      </form>
+    </section>
+  </main>
+
+  <script type="module" src="/js/controllers/log-activity-controller.js"></script>
+</body>
+</html>

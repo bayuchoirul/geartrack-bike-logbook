@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>GearTrack — Dashboard Telemetri</title>
+  <link rel="stylesheet" href="/css/telemetry.css" />
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 pb-24 md:pb-12">
+  <div id="app-shell"></div>
+
+  <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
+    <section class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <h1 data-i18n="dashboard.title" class="text-xl sm:text-2xl font-bold tracking-tight text-white">
+          Ringkasan Telemetri
+        </h1>
+        <p data-i18n="dashboard.subtitle" class="text-xs sm:text-sm text-slate-400 mt-1">
+          Pantau jarak tempuh, keausan komponen, dan aktivitas terbaru.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2.5">
+        <select
+          id="dashboard-bike-filter"
+          aria-label="Filter sepeda"
+          class="w-full sm:w-48 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:border-pink-500 focus:outline-none">
+          <option value="" data-i18n="dashboard.all_bikes">Semua Armada</option>
+        </select>
+
+        <button
+          type="button"
+          id="btn-sync-strava"
+          data-i18n="common.sync_strava"
+          class="hidden rounded-xl border border-orange-500/40 bg-orange-500/10 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-orange-300 hover:bg-orange-500/20 transition">
+          Sinkron Strava
+        </button>
+
+        <a
+          href="/log-activity"
+          data-i18n="dashboard.quick_log"
+          class="text-center rounded-xl bg-pink-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-pink-500 transition">
+          + Catat Aktivitas
+        </a>
+      </div>
+    </section>
+
+    <section id="dashboard-kpi-grid" aria-label="Ringkasan KPI"></section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-7 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 data-i18n="dashboard.section_wear" class="text-sm sm:text-base font-semibold text-white">
+            Prioritas Perawatan Komponen
+          </h2>
+          <a href="/garage" data-i18n="dashboard.view_garage" class="text-xs font-medium text-pink-400 hover:text-pink-300">
+            Buka Garasi →
+          </a>
+        </div>
+        <div id="dashboard-wear-list"></div>
+      </div>
+
+      <div class="lg:col-span-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 data-i18n="dashboard.section_recent" class="text-sm sm:text-base font-semibold text-white">
+            Aktivitas Terbaru
+          </h2>
+          <a href="/ledger" data-i18n="dashboard.view_ledger" class="text-xs font-medium text-pink-400 hover:text-pink-300">
+            Lihat Semua →
+          </a>
+        </div>
+        <div id="dashboard-recent-activities"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/controllers/dashboard-controller.js"></script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+-- ============================================================================
+-- GearTrack / Bike Logbook Telemetry — PostgreSQL & Supabase RLS Schema
+-- Selaras 100% dengan public/js/services/telemetry-service.js
+-- ============================================================================
+
+create extension if not exists "pgcrypto";
+
+create or replace function public.handle_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create table if not exists public.bikes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null check (char_length(trim(name)) > 0),
+  brand_model text not null default '',
+  total_odometer_km numeric(10, 2) not null default 0 check (total_odometer_km >= 0),
+  is_archived boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_bikes_user_order
+  on public.bikes (user_id, is_archived asc, created_at asc);
+
+drop trigger if exists trg_bikes_updated_at on public.bikes;
+create trigger trg_bikes_updated_at
+  before update on public.bikes
+  for each row execute function public.handle_updated_at();
+
+create table if not exists public.components (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  bike_id uuid not null references public.bikes(id) on delete cascade,
+  name text not null check (char_length(trim(name)) > 0),
+  category text not null default 'Service' check (char_length(trim(category)) > 0),
+  installed_odometer_km numeric(10, 2) not null default 0 check (installed_odometer_km >= 0),
+  lifespan_km numeric(10, 2) not null default 3000 check (lifespan_km > 0),
+  is_archived boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_components_user_created
+  on public.components (user_id, created_at desc);
+
+create index if not exists idx_components_bike_id
+  on public.components (bike_id);
+
+drop trigger if exists trg_components_updated_at on public.components;
+create trigger trg_components_updated_at
+  before update on public.components
+  for each row execute function public.handle_updated_at();
+
+create table if not exists public.activities (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  bike_id uuid not null references public.bikes(id) on delete cascade,
+  strava_activity_id bigint unique,
+  title text not null check (char_length(trim(title)) > 0),
+  date date not null default current_date,
+  distance_km numeric(10, 2) not null check (distance_km > 0),
+  duration_minutes integer not null default 0 check (duration_minutes >= 0),
+  elevation_gain_m integer not null default 0 check (elevation_gain_m >= 0),
+  notes text not null default '',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_activities_user_date
+  on public.activities (user_id, date desc);
+
+create index if not exists idx_activities_bike_id
+  on public.activities (bike_id);
+
+create table if not exists public.ledger_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  bike_id uuid not null references public.bikes(id) on delete cascade,
+  title text not null check (char_length(trim(title)) > 0),
+  category text not null default 'Service' check (char_length(trim(category)) > 0),
+  cost numeric(12, 2) not null default 0 check (cost >= 0),
+  date date not null default current_date,
+  distance_km numeric(10, 2) check (distance_km is null or distance_km >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_ledger_user_date
+  on public.ledger_entries (user_id, date desc);
+
+create index if not exists idx_ledger_bike_id
+  on public.ledger_entries (bike_id);
+
+drop trigger if exists trg_ledger_entries_updated_at on public.ledger_entries;
+create trigger trg_ledger_entries_updated_at
+  before update on public.ledger_entries
+  for each row execute function public.handle_updated_at();
+
+alter table public.bikes enable row level security;
+alter table public.components enable row level security;
+alter table public.activities enable row level security;
+alter table public.ledger_entries enable row level security;
+
+drop policy if exists "bikes_select_own" on public.bikes;
+create policy "bikes_select_own" on public.bikes for select to authenticated using (auth.uid() = user_id);
+drop policy if exists "bikes_insert_own" on public.bikes;
+create policy "bikes_insert_own" on public.bikes for insert to authenticated with check (auth.uid() = user_id);
+drop policy if exists "bikes_update_own" on public.bikes;
+create policy "bikes_update_own" on public.bikes for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "bikes_delete_own" on public.bikes;
+create policy "bikes_delete_own" on public.bikes for delete to authenticated using (auth.uid() = user_id);
+
+drop policy if exists "components_select_own" on public.components;
+create policy "components_select_own" on public.components for select to authenticated using (auth.uid() = user_id);
+drop policy if exists "components_insert_own" on public.components;
+create policy "components_insert_own" on public.components for insert to authenticated with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "components_update_own" on public.components;
+create policy "components_update_own" on public.components for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "components_delete_own" on public.components;
+create policy "components_delete_own" on public.components for delete to authenticated using (auth.uid() = user_id);
+
+drop policy if exists "activities_select_own" on public.activities;
+create policy "activities_select_own" on public.activities for select to authenticated using (auth.uid() = user_id);
+drop policy if exists "activities_insert_own" on public.activities;
+create policy "activities_insert_own" on public.activities for insert to authenticated with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "activities_update_own" on public.activities;
+create policy "activities_update_own" on public.activities for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "activities_delete_own" on public.activities;
+create policy "activities_delete_own" on public.activities for delete to authenticated using (auth.uid() = user_id);
+
+drop policy if exists "ledger_entries_select_own" on public.ledger_entries;
+create policy "ledger_entries_select_own" on public.ledger_entries for select to authenticated using (auth.uid() = user_id);
+drop policy if exists "ledger_entries_insert_own" on public.ledger_entries;
+create policy "ledger_entries_insert_own" on public.ledger_entries for insert to authenticated with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "ledger_entries_update_own" on public.ledger_entries;
+create policy "ledger_entries_update_own" on public.ledger_entries for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
+drop policy if exists "ledger_entries_delete_own" on public.ledger_entries;
+create policy "ledger_entries_delete_own" on public.ledger_entries for delete to authenticated using (auth.uid() = user_id);
