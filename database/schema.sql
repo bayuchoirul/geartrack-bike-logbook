@@ -265,3 +265,35 @@ drop policy if exists "ledger_entries_update_own" on public.ledger_entries;
 create policy "ledger_entries_update_own" on public.ledger_entries for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id and exists (select 1 from public.bikes b where b.id = bike_id and b.user_id = auth.uid()));
 drop policy if exists "ledger_entries_delete_own" on public.ledger_entries;
 create policy "ledger_entries_delete_own" on public.ledger_entries for delete to authenticated using (auth.uid() = user_id);
+
+create or replace function public.sync_bike_odometer_from_activities()
+returns trigger
+language plpgsql
+as $$
+begin
+  if (tg_op = 'DELETE' or tg_op = 'UPDATE') then
+    update public.bikes
+    set total_odometer_km = coalesce(
+      (select sum(distance_km) from public.activities where bike_id = old.bike_id),
+      0
+    )
+    where id = old.bike_id;
+  end if;
+
+  if (tg_op = 'INSERT' or tg_op = 'UPDATE') then
+    update public.bikes
+    set total_odometer_km = coalesce(
+      (select sum(distance_km) from public.activities where bike_id = new.bike_id),
+      0
+    )
+    where id = new.bike_id;
+  end if;
+
+  return coalesce(new, old);
+end;
+$$;
+
+drop trigger if exists trg_sync_bike_odometer on public.activities;
+create trigger trg_sync_bike_odometer
+  after insert or update of distance_km, bike_id or delete on public.activities
+  for each row execute function public.sync_bike_odometer_from_activities();
