@@ -20,7 +20,8 @@ import { getSupabaseClient } from '../core/supabase-client.js';
  * @property {string} badgeLabel
  * @property {string} description
  * @property {number} lifespanKm
- * @property {number} warningThresholdKm
+ * @property {number} warnThresholdPct
+ * @property {number} critThresholdPct
  */
 
 export const TABLES = {
@@ -61,15 +62,16 @@ function mapComponentFromDb(row) {
 
 /** @param {Record<string, any>} row @returns {ComponentRule} */
 function mapComponentRuleFromDb(row) {
-  const rawLifespan = Number(
-    row.lifespan_km ?? row.max_km ?? row.interval_km ?? row.service_interval_km ?? 3000
+  const rawMaxKm = Number(
+    row.default_max_km ?? row.lifespan_km ?? row.max_km ?? row.interval_km ?? 3000
   );
-  const lifespanKm = Number.isFinite(rawLifespan) && rawLifespan > 0 ? rawLifespan : 3000;
-  const rawWarning = Number(
-    row.warning_threshold_km ?? row.warn_km ?? Math.round(lifespanKm * 0.8)
-  );
-  const warningThresholdKm =
-    Number.isFinite(rawWarning) && rawWarning > 0 ? rawWarning : Math.round(lifespanKm * 0.8);
+  const lifespanKm = Number.isFinite(rawMaxKm) && rawMaxKm > 0 ? rawMaxKm : 3000;
+
+  const rawWarnPct = Number(row.warn_threshold_pct ?? 75);
+  const warnThresholdPct = Number.isFinite(rawWarnPct) && rawWarnPct > 0 ? rawWarnPct : 75;
+
+  const rawCritPct = Number(row.crit_threshold_pct ?? 90);
+  const critThresholdPct = Number.isFinite(rawCritPct) && rawCritPct > 0 ? rawCritPct : 90;
 
   return {
     id: String(row.id),
@@ -77,7 +79,8 @@ function mapComponentRuleFromDb(row) {
     badgeLabel: String(row.badge_label ?? 'SERVICE'),
     description: String(row.description ?? ''),
     lifespanKm,
-    warningThresholdKm,
+    warnThresholdPct,
+    critThresholdPct,
   };
 }
 

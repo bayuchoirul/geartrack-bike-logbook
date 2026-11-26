@@ -180,8 +180,8 @@ function renderComponentDistanceMatrix() {
 
   tbody.innerHTML = rows
     .map(({ rule, bike, usedKm, lifespanKm, remainingKm, pct }) => {
-      const isCritical = pct >= 90;
-      const isWarning = pct >= 75 && pct < 90;
+      const isCritical = pct >= (rule.critThresholdPct ?? 90);
+      const isWarning = pct >= (rule.warnThresholdPct ?? 75) && !isCritical;
 
       const badgeClass = isCritical
         ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
@@ -333,7 +333,8 @@ function render() {
 
   const activeBikes = state.bikes.filter((b) => !b.isArchived);
   if (filterBike) {
-    const allLabel = t('common.all_bikes') || 'Semua Sepeda';
+    const rawLabel = t('common.all_bikes');
+    const allLabel = !rawLabel || rawLabel === 'common.all_bikes' ? 'Semua Sepeda' : rawLabel;
     const options = [
       `<option value="">${escapeHtml(allLabel)}</option>`,
       ...activeBikes.map(
