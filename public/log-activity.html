@@ -1,189 +1,244 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html lang="id" class="dark">
 <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>Log Activity • Bike Logbook Telemetry v3.0</title>
-  <link href="https://fonts.googleapis.com" rel="preconnect"/>
-  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-  <link href="/css/telemetry.css" rel="stylesheet"/>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="/js/config/tailwind.config.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>GearTrack — Catat Aktivitas & Servis</title>
+  <link rel="stylesheet" href="/css/telemetry.css" />
 </head>
-<body class="bg-surface font-body-md text-on-surface antialiased min-h-screen">
-  <header class="telemetry-header fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/90 shadow-[0_1px_8px_rgba(0,0,0,0.4)]">
-    <div class="h-16 w-full px-margin-desktop flex items-center justify-between gap-4">
-      <div class="flex items-center gap-6">
-        <a href="/" class="flex items-center gap-2">
-          <span class="font-headline-sm text-headline-sm font-bold text-primary">Bike Logbook</span>
-          <span class="font-label-caps text-label-caps uppercase px-1.5 py-0.5 rounded bg-surface-container text-surface-tint">v3.0</span>
-        </a>
-        <nav class="flex items-center gap-5 text-body-md">
-          <a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/">Dashboard</a>
-          <a class="transition-colors py-1 text-primary-container font-semibold" href="/log-activity">Log Activity</a>
-          <a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/ledger">History &amp; Ledger</a>
-          <a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/garage">Garage &amp; Components</a>
-        </nav>
-      </div>
-      <div class="flex items-center gap-2">
-        <button data-action="sync-strava" aria-hidden="true" class="hidden flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-high hover:bg-surface-container-highest text-secondary transition-all" type="button">
-          <span class="material-symbols-outlined text-[16px]">bolt</span>
-          <span class="font-label-caps text-label-caps uppercase font-semibold">Sync Strava</span>
+<body class="min-h-screen bg-slate-950 text-slate-100 pb-24 md:pb-12">
+  <div id="app-shell"></div>
+
+  <main class="max-w-2xl mx-auto px-4 pt-6 space-y-6">
+    <div>
+      <h1 data-i18n="log.title" class="text-xl sm:text-2xl font-bold tracking-tight text-white">
+        Catat Aktivitas & Servis
+      </h1>
+      <p data-i18n="log.subtitle" class="text-xs sm:text-sm text-slate-400 mt-1">
+        Tambahkan sesi bersepeda manual atau catatan perawatan baru.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-1.5 rounded-2xl border border-slate-800 bg-slate-900 p-1.5">
+      <button type="button" data-log-tab="ride" data-i18n="log.tab_ride"
+        class="rounded-xl py-2.5 text-xs sm:text-sm font-semibold bg-pink-600 text-white transition">
+        Aktivitas Bersepeda
+      </button>
+      <button type="button" data-log-tab="maintenance" data-i18n="log.tab_maintenance"
+        class="rounded-xl py-2.5 text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition">
+        Perawatan & Suku Cadang
+      </button>
+    </div>
+
+    <section id="panel-log-ride" class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 sm:p-6">
+      <form id="form-log-ride" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label for="ride-bike" data-i18n="common.select_bike" class="block text-xs font-medium text-slate-300">
+              Pilih Sepeda
+            </label>
+            <select
+              id="ride-bike"
+              name="bikeId"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none">
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="ride-date" data-i18n="common.date" class="block text-xs font-medium text-slate-300">
+              Tanggal
+            </label>
+            <input
+              id="ride-date"
+              name="date"
+              type="date"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="ride-title" data-i18n="log.ride_title" class="block text-xs font-medium text-slate-300">
+            Nama Rute / Aktivitas
+          </label>
+          <input
+            id="ride-title"
+            name="title"
+            type="text"
+            required
+            data-i18n-placeholder="log.ride_title_ph"
+            placeholder="Contoh: Morning Loop Puncak"
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="space-y-1.5">
+            <label for="ride-distance" data-i18n="log.distance_km" class="block text-xs font-medium text-slate-300">
+              Jarak Tempuh (km)
+            </label>
+            <input
+              id="ride-distance"
+              name="distanceKm"
+              type="number"
+              step="0.01"
+              min="0.1"
+              required
+              placeholder="45.5"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="ride-duration" data-i18n="log.duration_min" class="block text-xs font-medium text-slate-300">
+              Durasi (Menit)
+            </label>
+            <input
+              id="ride-duration"
+              name="durationMinutes"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="95"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="ride-elevation" data-i18n="log.elevation_m" class="block text-xs font-medium text-slate-300">
+              Elevasi (m)
+            </label>
+            <input
+              id="ride-elevation"
+              name="elevationGainM"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="420"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="ride-notes" data-i18n="common.notes" class="block text-xs font-medium text-slate-300">
+            Catatan (Opsional)
+          </label>
+          <textarea
+            id="ride-notes"
+            name="notes"
+            rows="2"
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none"></textarea>
+        </div>
+
+        <button
+          type="submit"
+          id="btn-submit-ride"
+          data-i18n="log.submit_ride"
+          class="w-full rounded-xl bg-pink-600 px-4 py-3 text-sm font-semibold text-white hover:bg-pink-500 transition">
+          Simpan Aktivitas
         </button>
-        <div id="nav-auth-slot" class="flex items-center gap-2"></div>
-      </div>
-    </div>
-  </header>
+      </form>
+    </section>
 
-  <main class="w-full pt-16 min-h-[calc(100vh-64px)]">
-    <div class="w-full px-margin-desktop py-space-xl max-w-[1100px] mx-auto space-y-space-xl">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md bg-surface-container-low p-space-lg rounded-xl">
-        <div>
-          <span class="font-label-caps text-label-caps uppercase text-secondary">TELEMETRY &amp; WORKSHOP CONSOLE</span>
-          <h1 class="font-headline-lg text-headline-lg text-primary font-bold">Log Ride or Maintenance</h1>
-        </div>
-        <div class="inline-flex p-1 rounded-xl bg-surface-container-lowest">
-          <button id="btn-mode-ride" class="px-4 py-2 rounded-lg bg-surface-container-high text-primary-container font-label-caps text-label-caps uppercase font-bold" type="button">1. Log Ride</button>
-          <button id="btn-mode-service" class="px-4 py-2 rounded-lg text-on-surface-variant font-label-caps text-label-caps uppercase font-bold" type="button">2. Maintenance &amp; Cost</button>
-        </div>
-      </div>
-
-      <form id="form-manual-ride" class="bg-surface-container-low p-space-lg rounded-xl space-y-5">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h2 class="font-headline-md text-headline-md text-primary font-bold">Activity Entry &amp; Local GPX / FIT Import</h2>
-          <span class="font-telemetry-data text-[12px] text-on-surface-variant">Auto-fill di browser (.gpx / .fit) atau isi manual</span>
-        </div>
-
-        <!-- Dropzone / File Picker .gpx & .fit -->
-        <div id="activity-file-dropzone"
-          class="border border-dashed border-outline-variant/50 hover:border-secondary bg-surface-container-lowest/70 rounded-xl p-4 transition-colors">
-          <input id="activity-file-input" type="file" accept=".gpx,.fit" class="hidden"/>
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="flex items-start sm:items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-secondary/15 text-secondary flex items-center justify-center flex-shrink-0">
-                <span class="material-symbols-outlined text-[20px]">upload_file</span>
-              </div>
-              <div>
-                <div class="font-label-caps text-label-caps uppercase text-primary font-semibold">
-                  Import Rekaman Aktivitas (.GPX / .FIT)
-                </div>
-                <p id="activity-file-status" class="font-telemetry-data text-[12px] text-on-surface-variant">
-                  Pilih atau seret file .gpx / .fit dari iGPSPORT atau Garmin untuk mengisi form otomatis.
-                </p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2 self-end sm:self-center">
-              <button id="btn-choose-activity-file" type="button"
-                class="px-3.5 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-secondary font-label-caps text-label-caps uppercase font-bold transition-all">
-                Pilih File
-              </button>
-              <button id="btn-clear-activity-file" type="button"
-                class="hidden px-3 py-2 rounded-lg bg-surface-container hover:bg-error-container/30 text-on-surface-variant hover:text-error font-label-caps text-label-caps uppercase font-semibold transition-all">
-                Reset File
-              </button>
-            </div>
-          </div>
-          <div id="activity-file-warnings" class="hidden mt-3 p-2.5 rounded-lg bg-secondary/10 border border-secondary/30 font-telemetry-data text-[12px] text-secondary space-y-1"></div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Bicycle</label>
-            <select id="ride-bike-select" name="bike_id" required class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-3 rounded"></select>
-          </div>
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Ride Title</label>
-            <input type="text" name="title" required placeholder="e.g. Morning Gravel Loop" class="w-full bg-surface-container-lowest text-primary p-3 rounded"/>
-          </div>
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Distance (KM)</label>
-            <input type="number" step="0.01" min="0" name="distance_km" required placeholder="42.50" class="w-full bg-surface-container-lowest text-primary-container font-telemetry-metric-md p-2.5 rounded"/>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Ride Type</label>
-            <select name="ride_type" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-3 rounded">
-              <option value="Road">Road</option>
-              <option value="Gravel" selected>Gravel</option>
-              <option value="Commute">Commute</option>
-              <option value="Trainer/Ind.">Trainer/Ind.</option>
-              <option value="Run">Run</option>
+    <section id="panel-log-maintenance" class="hidden rounded-2xl border border-slate-800 bg-slate-900/80 p-5 sm:p-6">
+      <form id="form-log-maintenance" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label for="maint-bike" data-i18n="common.select_bike" class="block text-xs font-medium text-slate-300">
+              Pilih Sepeda
+            </label>
+            <select
+              id="maint-bike"
+              name="bikeId"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none">
             </select>
           </div>
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Date &amp; Time</label>
-            <input type="datetime-local" id="ride-date-input" name="ride_date" required class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-3 rounded"/>
-          </div>
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Moving Time (Min)</label>
-            <input type="number" min="0" name="moving_time_min" placeholder="0" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-3 rounded"/>
-          </div>
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Elevation Gain (M)</label>
-            <input type="number" min="0" name="elevation_gain_m" value="0" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-3 rounded"/>
+
+          <div class="space-y-1.5">
+            <label for="maint-date" data-i18n="common.date" class="block text-xs font-medium text-slate-300">
+              Tanggal
+            </label>
+            <input
+              id="maint-date"
+              name="date"
+              type="date"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
           </div>
         </div>
 
-        <div>
-          <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Notes</label>
-          <textarea name="notes" rows="2" placeholder="Kondisi rute, tekanan ban, performa shifting..." class="w-full bg-surface-container-lowest text-primary p-3 rounded"></textarea>
+        <div class="space-y-1.5">
+          <label for="maint-title" data-i18n="log.maint_title" class="block text-xs font-medium text-slate-300">
+            Nama Item / Servis
+          </label>
+          <input
+            id="maint-title"
+            name="title"
+            type="text"
+            required
+            data-i18n-placeholder="log.maint_title_ph"
+            placeholder="Contoh: Ganti Rantai Shimano 105"
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
         </div>
 
-        <div class="flex justify-end">
-          <button type="submit" class="px-6 py-3 rounded-xl bg-primary-container text-on-primary font-label-caps uppercase font-bold">Save Ride &amp; Update Component Wear</button>
-        </div>
-      </form>
-
-      <form id="form-maintenance-entry" class="hidden bg-surface-container-low p-space-lg rounded-xl space-y-4">
-        <h2 class="font-headline-md text-headline-md text-primary font-bold">Maintenance &amp; Component Action</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Select Active Component</label>
-            <select id="maint-comp-select" name="component_id" required class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-3 rounded"></select>
-          </div>
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Operation Type</label>
-            <select id="maint-action-type" name="action_type" class="w-full bg-surface-container-lowest text-secondary font-telemetry-data p-3 rounded">
-              <option value="reset">Reset Interval Counter (Lube / Wax / Tune-up)</option>
-              <option value="replace">Archive Old &amp; Install New Replacement Part</option>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="space-y-1.5">
+            <label for="maint-category" data-i18n="common.category" class="block text-xs font-medium text-slate-300">
+              Kategori
+            </label>
+            <select
+              id="maint-category"
+              name="category"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none">
+              <option value="Drivetrain">Drivetrain</option>
+              <option value="Tires">Tires</option>
+              <option value="Brakes">Brakes</option>
+              <option value="Bearings">Bearings</option>
+              <option value="Service">Service</option>
+              <option value="Accessories">Accessories</option>
             </select>
           </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Service / New Part Title</label>
-            <input type="text" name="title" required placeholder="e.g. Hot Wax Chain / New HG-601" class="w-full bg-surface-container-lowest text-primary p-3 rounded"/>
+
+          <div class="space-y-1.5">
+            <label for="maint-cost" data-i18n="log.cost_idr" class="block text-xs font-medium text-slate-300">
+              Biaya (IDR)
+            </label>
+            <input
+              id="maint-cost"
+              name="cost"
+              type="number"
+              step="1"
+              min="0"
+              required
+              placeholder="350000"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
           </div>
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Cost (IDR)</label>
-            <input type="number" name="cost_idr" value="0" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-3 rounded"/>
+
+          <div class="space-y-1.5">
+            <label for="maint-distance" data-i18n="log.odometer_at_service" class="block text-xs font-medium text-slate-300">
+              Odometer Saat Servis (km)
+            </label>
+            <input
+              id="maint-distance"
+              name="distanceKm"
+              type="number"
+              step="0.1"
+              min="0"
+              placeholder="7250"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
           </div>
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Workshop</label>
-            <input type="text" name="workshop_name" value="Self-maintained (Home Workshop)" class="w-full bg-surface-container-lowest text-primary p-3 rounded"/>
-          </div>
         </div>
-        <div>
-          <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Technical Notes</label>
-          <textarea name="notes" rows="2" placeholder="Catatan teknis atau alasan penggantian part..." class="w-full bg-surface-container-lowest text-primary p-3 rounded"></textarea>
-        </div>
-        <div class="flex justify-end">
-          <button type="submit" class="px-6 py-3 rounded-xl bg-secondary text-on-secondary font-label-caps uppercase font-bold">Commit Service Record</button>
-        </div>
+
+        <button
+          type="submit"
+          id="btn-submit-maint"
+          data-i18n="log.submit_maint"
+          class="w-full rounded-xl bg-pink-600 px-4 py-3 text-sm font-semibold text-white hover:bg-pink-500 transition">
+          Simpan Catatan Biaya
+        </button>
       </form>
-    </div>
+    </section>
   </main>
 
-  <footer class="w-full bg-surface-container-lowest py-6 px-margin-desktop flex flex-col md:flex-row items-center justify-between gap-4 font-telemetry-data text-body-sm text-on-surface-variant">
-    <span class="text-primary font-semibold">Bike Logbook Telemetry v3.0</span>
-    <span class="font-label-caps text-label-caps text-outline">VERCEL • SUPABASE • LOCAL GPX/FIT • GOOGLE SHEETS</span>
-  </footer>
-
   <script type="module" src="/js/controllers/log-activity-controller.js"></script>
-  <script type="module" src="/js/controllers/app-controller.js"></script>
 </body>
 </html>

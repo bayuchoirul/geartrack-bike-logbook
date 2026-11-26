@@ -1,162 +1,272 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html lang="id" class="dark">
 <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>Garage &amp; Components • Bike Logbook Telemetry v3.0</title>
-  <link href="https://fonts.googleapis.com" rel="preconnect"/>
-  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-  <link href="/css/telemetry.css" rel="stylesheet"/>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="/js/config/tailwind.config.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>GearTrack — Garasi & Komponen</title>
+  <link rel="stylesheet" href="/css/telemetry.css" />
 </head>
-<body class="bg-surface font-body-md text-on-surface antialiased min-h-screen">
-  <header class="telemetry-header fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/90 shadow-[0_1px_8px_rgba(0,0,0,0.4)]">
-    <div class="h-16 w-full px-margin-desktop flex items-center justify-between gap-4">
-      <div class="flex items-center gap-6">
-        <a href="/" class="flex items-center gap-2">
-          <span class="font-headline-sm text-headline-sm font-bold text-primary">Bike Logbook</span>
-          <span class="font-label-caps text-label-caps uppercase px-1.5 py-0.5 rounded bg-surface-container text-surface-tint">v3.0</span>
-        </a>
-        <nav class="flex items-center gap-5 text-body-md">
-          <a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/">Dashboard</a>
-          <a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/log-activity">Log Activity</a>
-          <a class="transition-colors py-1 text-on-surface-variant hover:text-on-surface" href="/ledger">History &amp; Ledger</a>
-          <a class="transition-colors py-1 text-primary-container font-semibold" href="/garage">Garage &amp; Components</a>
-        </nav>
+<body class="min-h-screen bg-slate-950 text-slate-100 pb-24 md:pb-12">
+  <div id="app-shell"></div>
+
+  <main class="max-w-6xl mx-auto px-4 pt-6 space-y-8">
+    <section class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 data-i18n="garage.title" class="text-xl sm:text-2xl font-bold tracking-tight text-white">
+          Garasi & Komponen
+        </h1>
+        <p data-i18n="garage.subtitle" class="text-xs sm:text-sm text-slate-400 mt-1">
+          Pantau odometer armada dan batas keausan komponen.
+        </p>
       </div>
-      <div class="flex items-center gap-2">
-        <button data-action="sync-strava" aria-hidden="true" class="hidden flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-high hover:bg-surface-container-highest text-secondary transition-all" type="button">
-          <span class="material-symbols-outlined text-[16px]">bolt</span>
-          <span class="font-label-caps text-label-caps uppercase font-semibold">Sync Strava</span>
+
+      <div class="grid grid-cols-2 sm:flex items-center gap-2.5">
+        <button
+          type="button"
+          id="btn-open-bike-modal"
+          data-i18n="garage.add_bike"
+          class="rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-200 hover:bg-slate-800 transition">
+          + Tambah Sepeda
         </button>
-        <div id="nav-auth-slot" class="flex items-center gap-2"></div>
+        <button
+          type="button"
+          id="btn-open-component-modal"
+          data-i18n="garage.add_component"
+          class="rounded-xl bg-pink-600 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-pink-500 transition">
+          + Pasang Komponen
+        </button>
       </div>
-    </div>
-  </header>
+    </section>
 
-  <main class="w-full pt-16 min-h-[calc(100vh-64px)]">
-    <div class="w-full px-margin-desktop py-space-xl max-w-[1440px] mx-auto space-y-space-xl">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-container-low p-space-lg rounded-xl">
-        <div>
-          <span class="font-label-caps text-label-caps uppercase text-surface-tint">GARAGE REGISTRY &amp; ARCHIVE</span>
-          <h1 class="font-headline-lg text-headline-lg text-primary font-bold">Fleet Garage &amp; Archived Parts</h1>
+    <section class="space-y-3">
+      <h2 data-i18n="garage.fleet_heading" class="text-sm sm:text-base font-semibold text-white">
+        Armada Sepeda
+      </h2>
+      <div id="bike-list"></div>
+    </section>
+
+    <section class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <h2 data-i18n="garage.components_heading" class="text-sm sm:text-base font-semibold text-white">
+            Status Keausan Komponen
+          </h2>
+          <span
+            id="attention-badge"
+            class="hidden rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-xs font-bold tabular-nums text-amber-300">
+            0
+          </span>
         </div>
-        <div class="flex gap-2">
-          <button data-action="open-add-bike" class="px-4 py-2.5 rounded-xl bg-surface-container-high text-secondary font-label-caps uppercase font-bold" type="button">+ Register Bike</button>
-          <button data-action="open-add-component" class="px-4 py-2.5 rounded-xl bg-primary-container text-on-primary font-label-caps uppercase font-bold" type="button">+ Register Part</button>
-        </div>
+
+        <select
+          id="filter-garage-bike"
+          aria-label="Filter sepeda garasi"
+          class="w-full sm:w-56 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs sm:text-sm text-slate-200 focus:border-pink-500 focus:outline-none">
+        </select>
       </div>
 
-      <section class="space-y-4">
-        <h2 class="font-headline-md text-headline-md text-primary font-bold">Registered Bicycles</h2>
-        <div id="live-bikes-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-      </section>
-
-      <section class="space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 class="font-headline-md text-headline-md text-primary font-bold">Component Calibration Rules</h2>
-            <p class="text-body-sm text-on-surface-variant">Standar batas umur pakai (km &amp; bulan) serta ambang peringatan dari database.</p>
-          </div>
-          <span class="font-label-caps text-label-caps uppercase px-2.5 py-1 rounded bg-surface-container-high text-secondary self-start sm:self-auto">SUPABASE RULESET</span>
-        </div>
-        <div id="live-rules-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-      </section>
-
-      <section class="space-y-4">
-        <h2 class="font-headline-md text-headline-md text-primary font-bold">Archived Components History</h2>
-        <div id="live-archived-list" class="space-y-3"></div>
-      </section>
-    </div>
+      <div id="component-wear-list"></div>
+    </section>
   </main>
 
-  <!-- Modal Edit / Register Bicycle (Wheel Spec & Tire Spec terpisah) -->
-  <div id="modal-edit-bike" class="hidden fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
-    <div class="w-full max-w-xl bg-surface-container-low border border-outline-variant/30 rounded-2xl p-space-lg space-y-5 shadow-2xl">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <span class="font-label-caps text-label-caps uppercase text-secondary">FLEET CONFIGURATION</span>
-          <h2 id="edit-bike-modal-title" class="font-headline-md text-headline-md text-primary font-bold">Edit Bicycle</h2>
-        </div>
-        <button id="btn-close-edit-bike" type="button" class="text-on-surface-variant hover:text-primary p-1 rounded">
-          <span class="material-symbols-outlined">close</span>
+  <div
+    id="modal-bike"
+    data-modal-backdrop
+    class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm items-end md:items-center justify-center p-0 md:p-4">
+    <div class="w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 data-i18n="garage.modal_bike_title" class="text-base font-bold text-white">
+          Data Sepeda
+        </h3>
+        <button
+          type="button"
+          data-close-modal="modal-bike"
+          class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white">
+          ✕
         </button>
       </div>
 
-      <form id="form-edit-bike" class="space-y-4">
-        <input type="hidden" name="bike_id" id="edit-bike-id"/>
+      <form id="form-bike" class="space-y-4">
+        <input type="hidden" name="id" />
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Bicycle Model Name</label>
-            <input type="text" name="name" id="edit-bike-name" required placeholder="e.g. Polygon Path X4" class="w-full bg-surface-container-lowest text-primary p-3 rounded"/>
-          </div>
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Subtitle / Discipline</label>
-            <input type="text" name="discipline" id="edit-bike-discipline" placeholder="e.g. Gravel Bike" class="w-full bg-surface-container-lowest text-primary p-3 rounded"/>
-          </div>
+        <div class="space-y-1.5">
+          <label for="bike-name" data-i18n="garage.field_bike_name" class="block text-xs font-medium text-slate-300">
+            Nama Sepeda
+          </label>
+          <input
+            id="bike-name"
+            name="name"
+            type="text"
+            required
+            placeholder="Polygon Path X4"
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Groupset Spec</label>
-            <input type="text" name="groupset_spec" id="edit-bike-groupset" placeholder="e.g. Shimano CUES / GRX" class="w-full bg-surface-container-lowest text-primary p-3 rounded"/>
-          </div>
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Gear Ratio</label>
-            <input type="text" name="gear_ratio" id="edit-bike-gear-ratio" placeholder="e.g. 50-34T / 11-36T" class="w-full bg-surface-container-lowest text-primary p-3 rounded"/>
-          </div>
+        <div class="space-y-1.5">
+          <label for="bike-brand" data-i18n="garage.field_brand" class="block text-xs font-medium text-slate-300">
+            Merek & Model
+          </label>
+          <input
+            id="bike-brand"
+            name="brandModel"
+            type="text"
+            placeholder="Custom #ff3989 · Shimano 105 R7000"
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Wheel Spec</label>
-            <input type="text" name="wheel_spec" id="edit-bike-wheel-spec" placeholder="e.g. Fulcrum Racing 7" class="w-full bg-surface-container-lowest text-primary p-3 rounded"/>
-          </div>
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Tire Spec</label>
-            <input type="text" name="tire_spec" id="edit-bike-tire-spec" placeholder="e.g. 700x32" class="w-full bg-surface-container-lowest text-primary p-3 rounded"/>
-          </div>
+        <div class="space-y-1.5">
+          <label for="bike-odometer" data-i18n="garage.field_odometer" class="block text-xs font-medium text-slate-300">
+            Total Odometer (km)
+          </label>
+          <input
+            id="bike-odometer"
+            name="totalOdometerKm"
+            type="number"
+            step="0.1"
+            min="0"
+            required
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-          <div>
-            <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Current Odometer (KM)</label>
-            <input type="number" step="0.01" min="0" name="odometer_km" id="edit-bike-odometer" required class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-3 rounded"/>
-          </div>
-          <div class="space-y-2 pt-4">
-            <div>
-              <label class="font-label-caps text-label-caps uppercase text-on-surface-variant block mb-1">Status</label>
-              <select name="status" id="edit-bike-status" class="w-full bg-surface-container-lowest text-primary font-telemetry-data p-2.5 rounded">
-                <option value="IN_SERVICE">IN_SERVICE</option>
-                <option value="MAINTENANCE">MAINTENANCE</option>
-                <option value="RETIRED">RETIRED</option>
-              </select>
-            </div>
-            <label class="inline-flex items-center gap-2 text-body-sm text-primary cursor-pointer pt-1">
-              <input type="checkbox" name="is_default" id="edit-bike-default" class="rounded bg-surface-container-lowest"/>
-              <span>Active Default Bicycle</span>
-            </label>
-          </div>
-        </div>
+        <label class="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer">
+          <input type="checkbox" name="isArchived" class="rounded border-slate-700 bg-slate-950 text-pink-600 focus:ring-pink-500" />
+          <span data-i18n="garage.field_archive">Arsipkan sepeda ini</span>
+        </label>
 
-        <div class="flex justify-end gap-2 pt-2">
-          <button id="btn-cancel-edit-bike" type="button" class="px-4 py-2.5 rounded-xl bg-surface-container-high text-on-surface-variant font-label-caps uppercase font-bold">Cancel</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-primary-container text-on-primary font-label-caps uppercase font-bold">Save Changes</button>
+        <div class="grid grid-cols-2 gap-2.5 pt-2">
+          <button
+            type="button"
+            data-close-modal="modal-bike"
+            data-i18n="common.cancel"
+            class="rounded-xl border border-slate-700 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800">
+            Batal
+          </button>
+          <button
+            type="submit"
+            id="btn-save-bike"
+            data-i18n="common.save"
+            class="rounded-xl bg-pink-600 py-2.5 text-sm font-semibold text-white hover:bg-pink-500">
+            Simpan
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <footer class="w-full bg-surface-container-lowest py-6 px-margin-desktop flex flex-col md:flex-row items-center justify-between gap-4 font-telemetry-data text-body-sm text-on-surface-variant">
-    <span class="text-primary font-semibold">Bike Logbook Telemetry v3.0</span>
-    <span class="font-label-caps text-label-caps text-outline">VERCEL • SUPABASE • LOCAL GPX/FIT • GOOGLE SHEETS</span>
-  </footer>
+  <div
+    id="modal-component"
+    data-modal-backdrop
+    class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm items-end md:items-center justify-center p-0 md:p-4">
+    <div class="w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 data-i18n="garage.modal_comp_title" class="text-base font-bold text-white">
+          Data Komponen
+        </h3>
+        <button
+          type="button"
+          data-close-modal="modal-component"
+          class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white">
+          ✕
+        </button>
+      </div>
+
+      <form id="form-component" class="space-y-4">
+        <input type="hidden" name="id" />
+
+        <div class="space-y-1.5">
+          <label for="comp-bike" data-i18n="common.select_bike" class="block text-xs font-medium text-slate-300">
+            Pilih Sepeda
+          </label>
+          <select
+            id="comp-bike"
+            name="bikeId"
+            required
+            class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none">
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label for="comp-name" data-i18n="garage.field_comp_name" class="block text-xs font-medium text-slate-300">
+              Nama Komponen
+            </label>
+            <input
+              id="comp-name"
+              name="name"
+              type="text"
+              required
+              placeholder="Rantai Shimano CN-HG601"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="comp-category" data-i18n="common.category" class="block text-xs font-medium text-slate-300">
+              Kategori
+            </label>
+            <select
+              id="comp-category"
+              name="category"
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none">
+              <option value="Drivetrain">Drivetrain</option>
+              <option value="Tires">Tires</option>
+              <option value="Brakes">Brakes</option>
+              <option value="Bearings">Bearings</option>
+              <option value="Service">Service</option>
+              <option value="Accessories">Accessories</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label for="comp-installed" data-i18n="garage.field_installed_km" class="block text-xs font-medium text-slate-300">
+              Odometer Saat Pasang (km)
+            </label>
+            <input
+              id="comp-installed"
+              name="installedOdometerKm"
+              type="number"
+              step="0.1"
+              min="0"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="comp-lifespan" data-i18n="garage.field_lifespan_km" class="block text-xs font-medium text-slate-300">
+              Target Umur Pakai (km)
+            </label>
+            <input
+              id="comp-lifespan"
+              name="lifespanKm"
+              type="number"
+              step="1"
+              min="1"
+              required
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-pink-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 pt-2">
+          <button
+            type="button"
+            data-close-modal="modal-component"
+            data-i18n="common.cancel"
+            class="rounded-xl border border-slate-700 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800">
+            Batal
+          </button>
+          <button
+            type="submit"
+            id="btn-save-component"
+            data-i18n="common.save"
+            class="rounded-xl bg-pink-600 py-2.5 text-sm font-semibold text-white hover:bg-pink-500">
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script type="module" src="/js/controllers/garage-controller.js"></script>
-  <script type="module" src="/js/controllers/app-controller.js"></script>
 </body>
 </html>

@@ -1,23 +1,71 @@
-// frontend/js/core/supabase-client.js
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { loadAppConfig } from './config.js';
+// public/js/core/supabase-client.js
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-let supabaseInstance = null;
-let loadedConfig = null;
+const CONFIG_CACHE_KEY = 'geartrack_supabase_cfg_v1';
 
-export async function getSupabase() {
-  if (supabaseInstance) return { supabase: supabaseInstance, config: loadedConfig };
-  loadedConfig = await loadAppConfig();
-  supabaseInstance = createClient(loadedConfig.URL, loadedConfig.ANON_KEY);
-  return { supabase: supabaseInstance, config: loadedConfig };
+/** @type {import('https://esm.sh/@supabase/supabase-js@2').SupabaseClient | null} */
+let clientInstance = null;
+
+/** @type {Promise<import('https://esm.sh/@supabase/supabase-js@2').SupabaseClient> | null} */
+let initPromise = null;
+
+/**
+ * @returns {Promise<{ supabaseUrl: string, supabaseAnonKey: string }>}
+ */
+async function loadPublicConfig() {
+  const cached = sessionStorage.getItem(CONFIG_CACHE_KEY);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (parsed?.supabaseUrl && parsed?.supabaseAnonKey) {
+        return parsed;
+      }
+    } catch {
+      sessionStorage.removeItem(CONFIG_CACHE_KEY);
+    }
+  }
+
+  const res = await fetch('/api/config');
+  if (!res.ok) {
+    throw new Error(`Gagal memuat konfigurasi Supabase (HTTP ${res.status}).`);
+  }
+
+  const data = await res.json();
+  const supabaseUrl = data.supabaseUrl || data.SUPABASE_URL;
+  const supabaseAnonKey = data.supabaseAnonKey || data.SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('SUPABASE_URL atau SUPABASE_ANON_KEY belum dikonfigurasi di Vercel.');
+  }
+
+  const config = { supabaseUrl, supabaseAnonKey };
+  sessionStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(config));
+  return config;
 }
 
-export function formatIDR(amount) {
-  const num = Number(amount) || 0;
-  return 'Rp ' + num.toLocaleString('id-ID', { maximumFractionDigits: 0 });
-}
+/**
+ * @returns {Promise<import('https://esm.sh/@supabase/supabase-js@2').SupabaseClient>}
+ */
+export async function getSupabaseClient() {
+  if (clientInstance) return clientInstance;
 
-export function formatKm(km) {
-  const num = Number(km) || 0;
-  return num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  if (!initPromise) {
+    initPromise = loadPublicConfig()
+      .then(({ supabaseUrl, supabaseAnonKey }) => {
+        clientInstance = createClient(supabaseUrl, supabaseAnonKey, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+          },
+        });
+        return clientInstance;
+      })
+      .catch((err) => {
+        initPromise = null;
+        throw err;
+      });
+  }
+
+  return initPromise;
 }
