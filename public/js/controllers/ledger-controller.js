@@ -2,16 +2,11 @@
 import { createPageController } from './app-controller.js';
 import { t } from '../core/i18n.js';
 import {
-  closeModal,
-  escapeHtml,
-  formatCurrencyIDR,
-  openModal,
-  setButtonLoading,
-  showToast,
-} from '../ui/ui-bindings.js';
-import {
   deleteLedgerEntry,
-  fetchLedgerSnapshot,
+  fetchComponentRules,
+  fetchUserBikes,
+  fetchUserComponents,
+  fetchUserLedger,
   upsertLedgerEntry,
 } from '../services/telemetry-service.js';
 
@@ -29,6 +24,7 @@ import {
  *   entries: LedgerEntry[],
  *   components: GearComponent[],
  *   rules: ComponentRule[],
+ *   rulesError: string,
  *   selectedBikeId: string,
  *   selectedCategory: string,
  *   searchQuery: string
@@ -39,10 +35,39 @@ const state = {
   entries: [],
   components: [],
   rules: [],
+  rulesError: '',
   selectedBikeId: '',
   selectedCategory: '',
   searchQuery: '',
 };
+
+/** @param {unknown} value @returns {string} */
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** @param {number} amount @returns {string} */
+function formatIDR(amount) {
+  return `Rp ${Math.round(Number(amount) || 0).toLocaleString('id-ID')}`;
+}
+
+/** @param {string} modalId @param {boolean} show */
+function toggleModal(modalId, show) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  if (show) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  } else {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+}
 
 /**
  * Merender matriks status keausan komponen berdasarkan odometer sepeda & component_rules.
@@ -51,6 +76,17 @@ function renderComponentDistanceMatrix() {
   const tbody = document.getElementById('component-rules-tbody');
   const countBadge = document.getElementById('component-rules-count');
   if (!tbody) return;
+
+  if (state.rulesError) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="px-4 py-6 text-center text-xs text-rose-400">
+          Gagal memuat aturan komponen: ${escapeHtml(state.rulesError)}
+        </td>
+      </tr>
+    `;
+    return;
+  }
 
   const activeBikes = state.bikes.filter(
     (b) => !b.isArchived && (!state.selectedBikeId || b.id === state.selectedBikeId)
@@ -192,6 +228,7 @@ function renderComponentDistanceMatrix() {
     .join('');
 }
 
+/** @param {LedgerEntry[]} filteredEntries */
 function renderSummaryCards(filteredEntries) {
   const container = document.getElementById('ledger-summary-cards');
   if (!container) return;
@@ -207,24 +244,25 @@ function renderSummaryCards(filteredEntries) {
   container.className = 'grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4';
   container.innerHTML = `
     <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-      <p class="text-xs text-slate-400">${escapeHtml(t('ledger.total_cost'))}</p>
-      <p class="mt-1.5 text-lg sm:text-xl font-bold text-white">${escapeHtml(formatCurrencyIDR(totalCost))}</p>
+      <p class="text-xs text-slate-400">Total Biaya Perawatan</p>
+      <p class="mt-1.5 text-lg sm:text-xl font-bold text-white">${escapeHtml(formatIDR(totalCost))}</p>
     </div>
     <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-      <p class="text-xs text-slate-400">${escapeHtml(t('ledger.cost_per_km'))}</p>
-      <p class="mt-1.5 text-lg sm:text-xl font-bold text-pink-400">${escapeHtml(formatCurrencyIDR(costPerKm))}/km</p>
+      <p class="text-xs text-slate-400">Biaya per Kilometer</p>
+      <p class="mt-1.5 text-lg sm:text-xl font-bold text-pink-400">${escapeHtml(formatIDR(costPerKm))}/km</p>
     </div>
     <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-      <p class="text-xs text-slate-400">${escapeHtml(t('ledger.total_entries'))}</p>
+      <p class="text-xs text-slate-400">Total Transaksi</p>
       <p class="mt-1.5 text-lg sm:text-xl font-bold text-white">${filteredEntries.length}</p>
     </div>
     <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-      <p class="text-xs text-slate-400">${escapeHtml(t('ledger.avg_per_entry'))}</p>
-      <p class="mt-1.5 text-lg sm:text-xl font-bold text-white">${escapeHtml(formatCurrencyIDR(avgCost))}</p>
+      <p class="text-xs text-slate-400">Rata-rata / Transaksi</p>
+      <p class="mt-1.5 text-lg sm:text-xl font-bold text-white">${escapeHtml(formatIDR(avgCost))}</p>
     </div>
   `;
 }
 
+/** @param {LedgerEntry[]} filteredEntries */
 function renderRecords(filteredEntries) {
   const container = document.getElementById('ledger-records');
   if (!container) return;
@@ -232,7 +270,7 @@ function renderRecords(filteredEntries) {
   if (filteredEntries.length === 0) {
     container.innerHTML = `
       <div class="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center text-xs sm:text-sm text-slate-500">
-        ${escapeHtml(t('ledger.empty_records'))}
+        Belum ada data tercatat.
       </div>
     `;
     return;
@@ -263,18 +301,18 @@ function renderRecords(filteredEntries) {
                 </p>
               </div>
               <div class="flex items-center justify-between sm:justify-end gap-3">
-                <span class="font-bold text-sm text-pink-400">${escapeHtml(formatCurrencyIDR(entry.cost))}</span>
+                <span class="font-bold text-sm text-pink-400">${escapeHtml(formatIDR(entry.cost))}</span>
                 <button
                   type="button"
                   data-edit-entry="${escapeHtml(entry.id)}"
                   class="rounded-lg border border-slate-700 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800">
-                  ${escapeHtml(t('common.edit'))}
+                  Edit
                 </button>
                 <button
                   type="button"
                   data-delete-entry="${escapeHtml(entry.id)}"
                   class="rounded-lg border border-rose-900/60 px-2.5 py-1 text-xs text-rose-400 hover:bg-rose-950/60">
-                  ${escapeHtml(t('common.delete'))}
+                  Hapus
                 </button>
               </div>
             </div>
@@ -295,8 +333,9 @@ function render() {
 
   const activeBikes = state.bikes.filter((b) => !b.isArchived);
   if (filterBike) {
+    const allLabel = t('common.all_bikes') || 'Semua Sepeda';
     const options = [
-      `<option value="">${escapeHtml(t('common.all_bikes'))}</option>`,
+      `<option value="">${escapeHtml(allLabel)}</option>`,
       ...activeBikes.map(
         (b) =>
           `<option value="${escapeHtml(b.id)}" ${b.id === state.selectedBikeId ? 'selected' : ''}>${escapeHtml(b.name)}</option>`
@@ -356,7 +395,11 @@ function bindEvents({ session }) {
       if (idInput) idInput.value = '';
       if (dateInput) dateInput.value = today;
     }
-    openModal('modal-ledger-entry');
+    toggleModal('modal-ledger-entry', true);
+  });
+
+  document.querySelectorAll('[data-close-modal="modal-ledger-entry"]').forEach((btn) => {
+    btn.addEventListener('click', () => toggleModal('modal-ledger-entry', false));
   });
 
   document.getElementById('ledger-records')?.addEventListener('click', async (e) => {
@@ -374,7 +417,7 @@ function bindEvents({ session }) {
         /** @type {HTMLInputElement} */ (form.elements.namedItem('cost')).value = String(entry.cost);
         /** @type {HTMLInputElement} */ (form.elements.namedItem('distanceKm')).value =
           entry.distanceKm !== null ? String(entry.distanceKm) : '';
-        openModal('modal-ledger-entry');
+        toggleModal('modal-ledger-entry', true);
       }
       return;
     }
@@ -385,9 +428,8 @@ function bindEvents({ session }) {
         await deleteLedgerEntry(deleteId);
         state.entries = state.entries.filter((item) => item.id !== deleteId);
         render();
-        showToast(t('common.deleted_success'), 'success');
-      } catch {
-        showToast(t('common.error_generic'), 'error');
+      } catch (err) {
+        console.error('[LedgerController] Delete error:', err);
       }
     }
   });
@@ -395,12 +437,12 @@ function bindEvents({ session }) {
   document.getElementById('form-ledger-entry')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = /** @type {HTMLFormElement} */ (e.currentTarget);
-    const btn = document.getElementById('btn-save-ledger');
+    const btn = /** @type {HTMLButtonElement | null} */ (document.getElementById('btn-save-ledger'));
     const fd = new FormData(form);
     const rawId = String(fd.get('id') || '').trim();
     const rawDist = fd.get('distanceKm');
 
-    setButtonLoading(btn, true, 'common.save');
+    if (btn) btn.disabled = true;
     try {
       await upsertLedgerEntry(session.user.id, {
         id: rawId || undefined,
@@ -411,25 +453,38 @@ function bindEvents({ session }) {
         cost: Number(fd.get('cost') || 0),
         distanceKm: rawDist !== null && rawDist !== '' ? Number(rawDist) : null,
       });
-      closeModal('modal-ledger-entry');
+      toggleModal('modal-ledger-entry', false);
       await loadData({ session });
       render();
-      showToast(t('common.saved_success'), 'success');
-    } catch {
-      showToast(t('common.error_generic'), 'error');
+    } catch (err) {
+      console.error('[LedgerController] Save error:', err);
     } finally {
-      setButtonLoading(btn, false, 'common.save');
+      if (btn) btn.disabled = false;
     }
   });
 }
 
 /** @param {{ session: UserSession }} ctx */
 async function loadData({ session }) {
-  const snapshot = await fetchLedgerSnapshot(session.user.id);
-  state.bikes = snapshot.bikes ?? [];
-  state.entries = snapshot.entries ?? [];
-  state.components = snapshot.components ?? [];
-  state.rules = snapshot.rules ?? [];
+  const [bikesRes, entriesRes, componentsRes, rulesRes] = await Promise.allSettled([
+    fetchUserBikes(session.user.id),
+    fetchUserLedger(session.user.id),
+    fetchUserComponents(session.user.id),
+    fetchComponentRules(),
+  ]);
+
+  state.bikes = bikesRes.status === 'fulfilled' ? bikesRes.value : [];
+  state.entries = entriesRes.status === 'fulfilled' ? entriesRes.value : [];
+  state.components = componentsRes.status === 'fulfilled' ? componentsRes.value : [];
+
+  if (rulesRes.status === 'fulfilled') {
+    state.rules = rulesRes.value;
+    state.rulesError = '';
+  } else {
+    state.rules = [];
+    state.rulesError =
+      rulesRes.reason instanceof Error ? rulesRes.reason.message : String(rulesRes.reason);
+  }
 }
 
 createPageController({ bindEvents, loadData, onRender: render });
