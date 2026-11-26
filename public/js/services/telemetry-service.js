@@ -13,11 +13,20 @@ import { getSupabaseClient } from '../core/supabase-client.js';
  * @typedef {import('../types/models.js').DashboardSnapshot} DashboardSnapshot
  * @typedef {import('../types/models.js').GarageSnapshot} GarageSnapshot
  * @typedef {import('../types/models.js').LedgerSnapshot} LedgerSnapshot
+ *
+ * @typedef {Object} ComponentRule
+ * @property {string} id
+ * @property {string} categoryName
+ * @property {string} badgeLabel
+ * @property {string} description
+ * @property {number} lifespanKm
+ * @property {number} warningThresholdKm
  */
 
 export const TABLES = {
   BIKES: 'bikes',
   COMPONENTS: 'components',
+  COMPONENT_RULES: 'component_rules',
   ACTIVITIES: 'activities',
   LEDGER: 'ledger_entries',
 };
@@ -47,6 +56,28 @@ function mapComponentFromDb(row) {
     lifespanKm: Number(row.lifespan_km ?? 3000),
     isArchived: Boolean(row.is_archived),
     createdAt: row.created_at ?? null,
+  };
+}
+
+/** @param {Record<string, any>} row @returns {ComponentRule} */
+function mapComponentRuleFromDb(row) {
+  const rawLifespan = Number(
+    row.lifespan_km ?? row.max_km ?? row.interval_km ?? row.service_interval_km ?? 3000
+  );
+  const lifespanKm = Number.isFinite(rawLifespan) && rawLifespan > 0 ? rawLifespan : 3000;
+  const rawWarning = Number(
+    row.warning_threshold_km ?? row.warn_km ?? Math.round(lifespanKm * 0.8)
+  );
+  const warningThresholdKm =
+    Number.isFinite(rawWarning) && rawWarning > 0 ? rawWarning : Math.round(lifespanKm * 0.8);
+
+  return {
+    id: String(row.id),
+    categoryName: String(row.category_name ?? row.name ?? 'Component'),
+    badgeLabel: String(row.badge_label ?? 'SERVICE'),
+    description: String(row.description ?? ''),
+    lifespanKm,
+    warningThresholdKm,
   };
 }
 
@@ -121,6 +152,19 @@ export async function fetchUserComponents(userId) {
   return (data ?? []).map(mapComponentFromDb);
 }
 
+/** @returns {Promise<ComponentRule[]>} */
+export async function fetchComponentRules() {
+  const supabase = await getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from(TABLES.COMPONENT_RULES)
+    .select('*')
+    .order('category_name', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map(mapComponentRuleFromDb);
+}
+
 /** @param {string} userId @param {number} [limit] @returns {Promise<ActivityLog[]>} */
 export async function fetchUserActivities(userId, limit = 50) {
   assertUserId(userId);
@@ -174,14 +218,19 @@ export async function fetchGarageSnapshot(userId) {
   return { bikes, components };
 }
 
-/** @param {string} userId @returns {Promise<LedgerSnapshot>} */
+/**
+ * @param {string} userId
+ * @returns {Promise<LedgerSnapshot & { components: GearComponent[], rules: ComponentRule[] }>}
+ */
 export async function fetchLedgerSnapshot(userId) {
-  const [bikes, entries] = await Promise.all([
+  const [bikes, entries, components, rules] = await Promise.all([
     fetchUserBikes(userId),
     fetchUserLedger(userId),
+    fetchUserComponents(userId),
+    fetchComponentRules(),
   ]);
 
-  return { bikes, entries };
+  return { bikes, entries, components, rules };
 }
 
 /** @param {string} userId @param {BikeUpsertInput} payload @returns {Promise<Bike>} */

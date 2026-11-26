@@ -32,6 +32,24 @@
 
     <section id="panel-log-ride" class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 sm:p-6">
       <form id="form-log-ride" class="space-y-4">
+        <!-- Zona Impor File .FIT / .GPX -->
+        <div class="rounded-xl border border-dashed border-slate-700 bg-slate-950/70 p-4 transition hover:border-pink-500/60">
+          <label for="activity-file-input" class="flex cursor-pointer flex-col items-center justify-center gap-1.5 text-center">
+            <span class="text-sm font-medium text-slate-200">
+              Impor File Telemetri (<span class="text-pink-400">.fit</span> / <span class="text-pink-400">.gpx</span>)
+            </span>
+            <span id="activity-file-status" class="text-xs text-slate-400">
+              Pilih file dari bike computer (iGPSPORT / Garmin / Strava) untuk mengisi form otomatis
+            </span>
+            <input
+              id="activity-file-input"
+              type="file"
+              accept=".fit,.gpx,application/gpx+xml"
+              class="mt-1 text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-200 hover:file:bg-slate-700"
+            />
+          </label>
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="space-y-1.5">
             <label for="ride-bike" data-i18n="common.select_bike" class="block text-xs font-medium text-slate-300">
@@ -226,24 +244,6 @@
               placeholder="7250"
               class="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-pink-500 focus:outline-none" />
           </div>
-        </div>
-
-        <!-- Zona Impor File .FIT / .GPX -->
-        <div class="mb-5 rounded-xl border border-dashed border-slate-700 bg-slate-900/60 p-4 transition hover:border-pink-500/60">
-          <label for="activity-file-input" class="flex cursor-pointer flex-col items-center justify-center gap-1 text-center">
-            <span class="text-sm font-medium text-slate-200">
-              Impor File Telemetri (<span class="text-pink-400">.fit</span> / <span class="text-pink-400">.gpx</span>)
-            </span>
-            <span id="activity-file-status" class="text-xs text-slate-400">
-              Pilih file dari bike computer (iGPSPORT / Garmin / Strava) untuk mengisi form otomatis
-            </span>
-            <input
-              id="activity-file-input"
-              type="file"
-              accept=".fit,.gpx,application/gpx+xml"
-              class="sr-only"
-            />
-          </label>
         </div>
 
         <button

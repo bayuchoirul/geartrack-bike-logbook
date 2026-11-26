@@ -266,6 +266,16 @@ create policy "ledger_entries_update_own" on public.ledger_entries for update to
 drop policy if exists "ledger_entries_delete_own" on public.ledger_entries;
 create policy "ledger_entries_delete_own" on public.ledger_entries for delete to authenticated using (auth.uid() = user_id);
 
+update public.bikes b
+set total_odometer_km = coalesce(
+  (
+    select sum(a.distance_km)
+    from public.activities a
+    where a.bike_id = b.id
+  ),
+  0
+);
+
 create or replace function public.sync_bike_odometer_from_activities()
 returns trigger
 language plpgsql
@@ -297,3 +307,110 @@ drop trigger if exists trg_sync_bike_odometer on public.activities;
 create trigger trg_sync_bike_odometer
   after insert or update of distance_km, bike_id or delete on public.activities
   for each row execute function public.sync_bike_odometer_from_activities();
+
+-- 1. Pastikan kolom jarak tempuh tersedia di component_rules
+alter table public.component_rules
+  add column if not exists lifespan_km numeric(10, 2) not null default 3000,
+  add column if not exists warning_threshold_km numeric(10, 2) not null default 2500;
+
+-- 2. Aktifkan RLS & izinkan SELECT untuk user yang login
+alter table public.component_rules enable row level security;
+
+drop policy if exists "component_rules_select_authenticated" on public.component_rules;
+create policy "component_rules_select_authenticated"
+  on public.component_rules
+  for select
+  to authenticated
+  using (true);
+
+-- 3. Salin data lama dari maintenance_logs ke ledger_entries secara dinamis (aman dari perbedaan nama kolom)
+do $$
+declare
+  v_user_expr text;
+  v_title_expr text;
+  v_category_expr text;
+  v_cost_expr text;
+  v_date_expr text;
+  v_dist_expr text;
+  v_created_expr text;
+  v_sql text;
+begin
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'maintenance_logs'
+  ) then
+    -- Cek kolom user_id (ambil dari m.user_id jika ada, jika tidak pakai b.user_id)
+    if exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='user_id') then
+      v_user_expr := 'coalesce(m.user_id, b.user_id)';
+    else
+      v_user_expr := 'b.user_id';
+    end if;
+
+    -- Cek kolom judul (title / item_name / description / name)
+    if exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='title') then
+      v_title_expr := 'coalesce(nullif(trim(m.title), ''''), ''Maintenance'')';
+    elsif exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='item_name') then
+      v_title_expr := 'coalesce(nullif(trim(m.item_name), ''''), ''Maintenance'')';
+    elsif exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='description') then
+      v_title_expr := 'coalesce(nullif(trim(m.description), ''''), ''Maintenance'')';
+    else
+      v_title_expr := '''Maintenance''';
+    end if;
+
+    -- Cek kolom kategori
+    if exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='category') then
+      v_category_expr := 'coalesce(nullif(trim(m.category), ''''), ''Service'')';
+    else
+      v_category_expr := '''Service''';
+    end if;
+
+    -- Cek kolom biaya (cost / price / amount)
+    if exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='cost') then
+      v_cost_expr := 'coalesce(m.cost, 0)';
+    elsif exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='price') then
+      v_cost_expr := 'coalesce(m.price, 0)';
+    elsif exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='amount') then
+      v_cost_expr := 'coalesce(m.amount, 0)';
+    else
+      v_cost_expr := '0';
+    end if;
+
+    -- Cek kolom tanggal (date / service_date / logged_at)
+    if exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='date') then
+      v_date_expr := 'coalesce(m.date::date, current_date)';
+    elsif exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='service_date') then
+      v_date_expr := 'coalesce(m.service_date::date, current_date)';
+    elsif exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='logged_at') then
+      v_date_expr := 'coalesce(m.logged_at::date, current_date)';
+    else
+      v_date_expr := 'current_date';
+    end if;
+
+    -- Cek kolom odometer (distance_km / odometer_km)
+    if exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='distance_km') then
+      v_dist_expr := 'm.distance_km';
+    elsif exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='odometer_km') then
+      v_dist_expr := 'm.odometer_km';
+    else
+      v_dist_expr := 'null';
+    end if;
+
+    -- Cek kolom created_at
+    if exists (select 1 from information_schema.columns where table_schema='public' and table_name='maintenance_logs' and column_name='created_at') then
+      v_created_expr := 'coalesce(m.created_at, now())';
+    else
+      v_created_expr := 'now()';
+    end if;
+
+    v_sql := format(
+      'insert into public.ledger_entries (id, user_id, bike_id, title, category, cost, date, distance_km, created_at)
+       select m.id, %s, m.bike_id, %s, %s, %s, %s, %s, %s
+       from public.maintenance_logs m
+       join public.bikes b on b.id = m.bike_id
+       where not exists (select 1 from public.ledger_entries l where l.id = m.id)',
+      v_user_expr, v_title_expr, v_category_expr, v_cost_expr, v_date_expr, v_dist_expr, v_created_expr
+    );
+
+    execute v_sql;
+  end if;
+end $$;
