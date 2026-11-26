@@ -3,6 +3,7 @@ import { createPageController } from './app-controller.js';
 import { t } from '../core/i18n.js';
 import { escapeHtml, setButtonLoading, showToast } from '../ui/ui-bindings.js';
 import { createActivityLog, createLedgerEntry, fetchUserBikes } from '../services/telemetry-service.js';
+import { parseActivityFile } from '../domain/activity-file-parser.js';
 
 /**
  * @typedef {import('../types/models.js').Bike} Bike
@@ -40,6 +41,21 @@ function render() {
   });
 }
 
+/**
+ * Mengisi input di dalam #form-log-ride berdasarkan atribut `name` yang dipakai FormData.
+ * @param {HTMLFormElement} form
+ * @param {string} fieldName
+ * @param {string} value
+ */
+function setFormFieldValue(form, fieldName, value) {
+  const el = /** @type {HTMLInputElement | HTMLTextAreaElement | null} */ (
+    form.elements.namedItem(fieldName)
+  );
+  if (el && value !== '') {
+    el.value = value;
+  }
+}
+
 /** @param {{ session: UserSession }} ctx */
 function bindEvents({ session }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -56,7 +72,60 @@ function bindEvents({ session }) {
     });
   });
 
-  document.getElementById('form-log-ride')?.addEventListener('submit', async (event) => {
+  const rideForm = /** @type {HTMLFormElement | null} */ (document.getElementById('form-log-ride'));
+  const fileInput = /** @type {HTMLInputElement | null} */ (
+    document.getElementById('activity-file-input')
+  );
+  const fileStatus = document.getElementById('activity-file-status');
+  const defaultFileStatusText =
+    fileStatus?.textContent ||
+    'Pilih file dari bike computer (iGPSPORT / Garmin / Strava) untuk mengisi form otomatis';
+
+  fileInput?.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    if (!file || !rideForm) return;
+
+    if (fileStatus) {
+      fileStatus.textContent = `Membaca ${file.name}...`;
+      fileStatus.className = 'text-xs text-amber-400';
+    }
+
+    try {
+      const parsed = await parseActivityFile(file);
+
+      if (parsed.title) setFormFieldValue(rideForm, 'title', parsed.title);
+      if (parsed.date) setFormFieldValue(rideForm, 'date', parsed.date);
+      if (parsed.distanceKm > 0) setFormFieldValue(rideForm, 'distanceKm', String(parsed.distanceKm));
+      if (parsed.durationMinutes > 0) {
+        setFormFieldValue(rideForm, 'durationMinutes', String(parsed.durationMinutes));
+      }
+      if (parsed.elevationGainM > 0) {
+        setFormFieldValue(rideForm, 'elevationGainM', String(parsed.elevationGainM));
+      }
+
+      const notesEl = /** @type {HTMLTextAreaElement | null} */ (
+        rideForm.elements.namedItem('notes')
+      );
+      if (notesEl && !notesEl.value.trim() && parsed.notes) {
+        notesEl.value = parsed.notes;
+      }
+
+      if (fileStatus) {
+        fileStatus.textContent = `Berhasil memuat ${file.name} (${parsed.distanceKm} km, ${parsed.durationMinutes} mnt).`;
+        fileStatus.className = 'text-xs text-emerald-400';
+      }
+      showToast(`Telemetri ${file.name} berhasil dimuat.`, 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Gagal membaca file telemetri.';
+      if (fileStatus) {
+        fileStatus.textContent = message;
+        fileStatus.className = 'text-xs text-rose-400';
+      }
+      showToast(message, 'error');
+    }
+  });
+
+  rideForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const form = /** @type {HTMLFormElement} */ (event.currentTarget);
     const btn = document.getElementById('btn-submit-ride');
@@ -75,6 +144,11 @@ function bindEvents({ session }) {
       });
       showToast(t('common.saved_success'), 'success');
       form.reset();
+      if (fileInput) fileInput.value = '';
+      if (fileStatus) {
+        fileStatus.textContent = defaultFileStatusText;
+        fileStatus.className = 'text-xs text-slate-400';
+      }
       const rideDateInput = /** @type {HTMLInputElement | null} */ (
         document.getElementById('ride-date')
       );
